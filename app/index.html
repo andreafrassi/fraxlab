@@ -123,7 +123,7 @@ textarea.input{min-height:70px;resize:vertical;line-height:1.5}
 .hero h1{font-size:23px;margin-bottom:6px}
 .hero p{color:var(--muted);margin:0 0 16px;max-width:460px}
 .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:22px}
-@media(min-width:720px){.tiles{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:720px){.tiles{grid-template-columns:repeat(3,1fr)}}
 .tile{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;cursor:pointer;
   transition:border-color .15s,background .15s;text-align:left}
 .tile:hover{border-color:var(--border2);background:var(--surface2)}
@@ -198,9 +198,12 @@ const ROSA=STRAT.rosa;
 /* ---- persisted DB ---- */
 const LS='fantaasta_v1';
 let DB=loadDB();
+function migrateAuction(a){const b=a.budget||500;
+  (a.slots||[]).forEach(sl=>{if(sl.esito&&sl.esito.prezzo!=null&&sl.esito.pct==null){sl.esito.pct=sl.esito.prezzo/b;delete sl.esito.prezzo;}});
+  delete a.budget;delete a.participants;return a;}
 function loadDB(){let r;try{r=JSON.parse(localStorage.getItem(LS));}catch(e){}
-  if(r&&r.v===2&&r.auctions)return{v:2,auctions:r.auctions};
-  if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[a]};}
+  if(r&&r.v===2&&r.auctions)return{v:2,auctions:r.auctions.map(migrateAuction)};
+  if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)]};}
   return{v:2,auctions:[]};}
 function save(){localStorage.setItem(LS,JSON.stringify(DB));}
 /* ---- runtime nav ---- */
@@ -212,10 +215,9 @@ let _uid=Date.now();const uid=p=>p+(++_uid);
 const $=s=>document.querySelector(s);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const A=()=>DB.auctions.find(a=>a.id===R.currentId)||null;
-const budget=()=>{const a=A();return a?a.budget:0;};
-const crOf=(a,pct)=>Math.round(pct*a.budget);
-const cr=pct=>{const a=A();return a?Math.round(pct*a.budget):0;};
 const suggPct=p=>(p.qtA||1)/500;
+const fmtPct=x=>(x*100).toFixed(1)+'%';
+const pctFmt=p=>fmtPct(suggPct(p));
 const fm=(p,s)=>p.stats&&p.stats[s]?p.stats[s].fm:null;
 const st25=(p,k)=>p.stats&&p.stats['25/26']?p.stats['25/26'][k]:null;
 function media3(p){const v=SEASONS.map(s=>fm(p,s)).filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
@@ -263,8 +265,8 @@ function addSlot(pid){const a=A(),p=byId[pid];if(!a||!p||slotOf(pid))return;a.sl
 function addCand(sid,pid){const a=A(),sl=a&&a.slots.find(x=>x.id===sid);if(!sl||slotOf(pid))return;sl.cand.push({pid,pct:suggPct(byId[pid]),note:''});save();}
 function removeCand(sid,pid){const a=A(),sl=a&&a.slots.find(x=>x.id===sid);if(!sl)return;sl.cand=sl.cand.filter(c=>c.pid!==pid);if(!sl.cand.length)a.slots=a.slots.filter(x=>x.id!==sid);save();}
 function budgetStats(a){a=a||A();let speso=0,impegnato=0;const per={P:{pl:0,got:0},D:{pl:0,got:0},C:{pl:0,got:0},A:{pl:0,got:0}};
-  a.slots.forEach(sl=>{const RR=per[sl.r];if(!RR)return;if(sl.esito){speso+=sl.esito.prezzo;RR.pl+=sl.esito.prezzo;RR.got++;}else{const v=crOf(a,sl.cand[0].pct);impegnato+=v;RR.pl+=v;}});
-  return{b:a.budget,speso,impegnato,residuo:a.budget-speso,dopo:a.budget-speso-impegnato,per,got:per.P.got+per.D.got+per.C.got+per.A.got};}
+  a.slots.forEach(sl=>{const RR=per[sl.r];if(!RR)return;if(sl.esito){speso+=sl.esito.pct;RR.pl+=sl.esito.pct;RR.got++;}else{const v=sl.cand[0].pct;impegnato+=v;RR.pl+=v;}});
+  return{speso,impegnato,residuo:1-speso,dopo:1-speso-impegnato,per,got:per.P.got+per.D.got+per.C.got+per.A.got};}
 function goalsAttesi(a){a=a||A();let g=0;a.slots.forEach(sl=>{if(sl.esito){const p=byId[sl.esito.pid];g+=(p&&st25(p,'gf'))||0;}});return g;}
 
 /* ---- icons ---- */
@@ -315,14 +317,14 @@ function render(){
 function renderTop(){
   const a=A();
   let left = a
-    ? `<button class="backbtn" data-act="aste">${IC.back} Le tue aste</button>`
+    ? `<button class="backbtn" data-act="aste">${IC.back} Le tue strategie</button>`
     : `<div class="logo" data-act="home"><span class="mark">${IC.flask}</span> Sandrini<b>App</b></div>`;
   let mid = a ? '' :
     `<div class="search"><span class="ic">${IC.search}</span>
       <input id="gsearch" placeholder="Cerca giocatore…" value="${esc(R.search)}" autocomplete="off">
       <div id="sres"></div></div>`;
   let right = a
-    ? `<div class="budgetpill tag blue">Residuo ${budgetStats(a).residuo} / ${a.budget}</div>`
+    ? `<div class="budgetpill tag blue">Residuo ${fmtPct(budgetStats(a).residuo)}</div>`
     : `<div class="avatar">MA</div>`;
   $('#topbar').innerHTML = left+(mid?mid:'<div class="spacer"></div>')+`<div class="spacer"></div>`+right;
   if(!a){const gi=$('#gsearch');if(gi){gi.addEventListener('input',e=>{R.search=e.target.value;renderSearch();});
@@ -336,7 +338,7 @@ function renderSearch(){
   box.className='sresults';
   box.innerHTML=arr.map(p=>`<div class="pcard" data-open="${p.id}"><span class="chip ${p.r}">${p.r}</span>
     <div><div class="nm">${esc(p.nome)}</div><div class="mt">${esc(p.sq)}</div></div><div class="push"></div>
-    <div class="qt num">${p.qtA}</div><div class="faint small">qt</div></div>`).join('');
+    <div class="qt num">${pctFmt(p)}</div><div class="faint small">valore</div></div>`).join('');
 }
 function renderNav(){
   if(!A()){$('#nav').innerHTML='';return;}
@@ -349,21 +351,19 @@ function renderNav(){
 function viewHome(){
   const recent=DB.auctions.slice().sort((x,y)=>(y.createdAt||0)-(x.createdAt||0)).slice(0,3);
   const tile=(act,cls,ic,tt,td)=>`<div class="tile" data-act="${act}"><div class="ti ${cls}">${ic}</div><div class="tt">${tt}</div><div class="td">${td}</div></div>`;
-  const recentHtml=recent.length?`<div class="sec-title" style="margin-top:6px">Le tue aste recenti</div>`+
+  const recentHtml=recent.length?`<div class="sec-title" style="margin-top:6px">Le tue strategie recenti</div>`+
     recent.map(a=>{const bs=budgetStats(a);return `<div class="card" style="cursor:pointer;padding:13px;margin-bottom:10px" data-open-auction="${a.id}">
-      <div class="between"><div><div style="font-weight:650">${esc(a.name)}</div><div class="muted small">${a.participants} part. · ${a.budget} mln · rosa ${bs.got}/25</div></div>
+      <div class="between"><div><div style="font-weight:650">${esc(a.name)}</div><div class="muted small">rosa ${bs.got}/25</div></div>
       <span class="tag blue">${a.slots.length} obiettivi</span></div></div>`;}).join(''):'';
   return `<div style="max-width:840px;margin:0 auto">
     <div class="hero">
       <h1>Prepara la tua asta con l'assistente</h1>
-      <p>Crea una PreAsta, scorri i giocatori reparto per reparto, salva le tue scelte con prezzo suggerito e arriva all'asta con le idee chiare.</p>
-      <button class="btn primary" data-act="new-auction">${IC.plus} Crea un nuovo PreAsta</button>
+      <p>Crea una strategia PreAsta, scorri i giocatori reparto per reparto e arriva all'asta con le idee chiare.</p>
     </div>
     <div class="tiles">
-      ${tile('new-auction','violet',IC.wand,'Crea PreAsta','Assistente a 4 reparti')}
-      ${tile('listone','blue',IC.list,'Listone','Tutti i giocatori')}
-      ${tile('aste','green',IC.target,'Le tue aste','Gestisci le bozze')}
-      ${tile('open-strategia','amber',IC.book,'Strategia','Consigli & budget')}
+      ${tile('new-auction','violet',IC.wand,'Crea una strategia PreAsta','Assistente a 4 reparti')}
+      ${tile('aste','green',IC.target,'Le tue strategie','Storico delle tue PreAste')}
+      ${tile('listone','blue',IC.list,'Listone 26/27','Tutti i giocatori')}
     </div>
     ${recentHtml}
   </div>`;
@@ -396,7 +396,7 @@ function previewCard(p){
   const tm=trendMeta(p.trend);
   const mv=st25(p,'mv'),f=fm(p,'25/26'),pv=st25(p,'pv'),isP=p.r==='P';
   const inA=!!A(),inSlot=inA&&slotOf(p.id);
-  const val=inA?cr(suggPct(p)):p.qtA,vlab=inA?'consigl.':'qt';
+  const val=pctFmt(p),vlab=inA?'consigl.':'valore';
   const sp=(ic,l,v)=>(v==null||v==='')?'':`<span class="sp" title="${l}">${SIC[ic]||''}${l}<b>${v}</b></span>`;
   const c1=isP?sp('gs','GS',st25(p,'gs')):sp('gf','G',st25(p,'gf'));
   const c2=isP?sp('rp','Rp',st25(p,'rp')):sp('ass','A',st25(p,'ass'));
@@ -422,21 +422,21 @@ function viewAste(){
   const cards=list.map(a=>{const bs=budgetStats(a),t=template(a);
     return `<div class="card" style="cursor:pointer;padding:15px" data-open-auction="${a.id}">
       <div class="between"><div style="min-width:0"><h2 style="font-size:17px">${esc(a.name)}</h2>
-        <div class="muted small">${a.participants} partecipanti · ${a.budget} mln · ${esc(t.nome.split(' (')[0])}</div></div>
+        <div class="muted small">${esc(t.nome.split(' (')[0])}${a.description?' · '+esc(a.description):''}</div></div>
         <div class="row" style="gap:6px" onclick="event.stopPropagation()">
           <button class="iconbtn" data-ren="${a.id}">${IC.edit}</button>
           <button class="iconbtn" data-dup="${a.id}">${IC.copy}</button>
           <button class="iconbtn" data-del="${a.id}">${IC.trash}</button></div></div>
       <div class="row" style="gap:16px;margin-top:12px">
         <div><div class="num" style="font-weight:750;font-size:18px">${bs.got}<span class="faint" style="font-size:13px">/25</span></div><div class="faint small">rosa</div></div>
-        <div><div class="num" style="font-weight:750;font-size:18px">${bs.speso}</div><div class="faint small">speso</div></div>
-        <div><div class="num" style="font-weight:750;font-size:18px;color:${bs.residuo<0?'var(--neg)':'var(--text)'}">${bs.residuo}</div><div class="faint small">residuo</div></div>
+        <div><div class="num" style="font-weight:750;font-size:18px">${fmtPct(bs.speso)}</div><div class="faint small">speso</div></div>
+        <div><div class="num" style="font-weight:750;font-size:18px;color:${bs.residuo<0?'var(--neg)':'var(--text)'}">${fmtPct(bs.residuo)}</div><div class="faint small">residuo</div></div>
         <div class="push" style="flex:1"></div><span class="tag blue">${a.slots.length} obiettivi</span></div>
       <div class="bar" style="margin-top:12px"><i style="width:${Math.round(bs.got/25*100)}%"></i></div></div>`;}).join('');
   return `<div style="max-width:760px;margin:0 auto"><div class="between" style="margin-bottom:18px">
-    <div><h1 style="font-size:22px">Le tue aste</h1><div class="muted small">Una bozza per ogni lega o scenario.</div></div>
+    <div><h1 style="font-size:22px">Le tue strategie</h1><div class="muted small">Una bozza per ogni lega o scenario.</div></div>
     <div class="row" style="gap:8px"><button class="backbtn" data-act="home">${IC.back} Home</button><button class="btn primary" data-act="new-auction">${IC.plus} Nuova</button></div></div>
-    ${list.length?cards:`<div class="empty">${IC.target}<div>Nessuna asta ancora</div>
+    ${list.length?cards:`<div class="empty">${IC.target}<div>Nessuna strategia ancora</div>
       <button class="btn primary" data-act="new-auction" style="margin:14px auto 0">${IC.plus} Crea la prima</button></div>`}</div>`;
 }
 
@@ -488,16 +488,16 @@ function bindAssist(){
 function slotCard(sl){
   const resolved=!!sl.esito;
   const rows=sl.cand.map((c,i)=>{const p=byId[c.pid];if(!p)return'';const got=resolved&&sl.esito.pid===c.pid;
-    const credits=cr(c.pct),pctTxt=(c.pct*100).toFixed(1);const ord=['Preferito','2ª scelta','3ª scelta','4ª scelta'][i]||((i+1)+'ª');
+    const pctTxt=(c.pct*100).toFixed(1);const ord=['Preferito','2ª scelta','3ª scelta','4ª scelta'][i]||((i+1)+'ª');
     return `<div class="between" style="padding:8px 0;${i>0?'border-top:1px solid var(--border)':''};${resolved&&!got?'opacity:.4':''}">
       <div class="row" style="min-width:0"><span class="chip ${p.r}">${p.r}</span>
         <div style="min-width:0"><div class="nm" style="font-weight:600"><span class="pref">${ord}</span> ${esc(p.nome)} ${got?'<span class="tag green">PRESO</span>':''}</div>
-          <div class="mt muted small">${esc(p.sq)} · qt ${p.qtA} · FM ${fm(p,'25/26')!=null?fm(p,'25/26').toFixed(2):'—'}</div></div></div>
-      ${resolved?(got?`<div style="text-align:right"><div class="num" style="font-weight:750">${sl.esito.prezzo}</div><div class="faint small">pagato</div></div>`:''):
+          <div class="mt muted small">${esc(p.sq)} · cons. ${pctFmt(p)} · FM ${fm(p,'25/26')!=null?fm(p,'25/26').toFixed(2):'—'}</div></div></div>
+      ${resolved?(got?`<div style="text-align:right"><div class="num" style="font-weight:750">${fmtPct(sl.esito.pct)}</div><div class="faint small">pagato</div></div>`:''):
         `<div class="row" style="gap:6px"><div style="text-align:right">
-          <input class="input num" style="width:62px;padding:7px 8px;min-height:36px;text-align:right" type="number" min="0" value="${credits}" data-price="${sl.id}|${c.pid}">
-          <div class="faint small">${pctTxt}%</div></div>
-          <button class="iconbtn" data-sugg="${sl.id}|${c.pid}" title="Consigliato (${cr(suggPct(p))})"><svg viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M6 6l1.4 1.4M16.6 16.6L18 18M18 6l-1.4 1.4M7.4 16.6L6 18"/><circle cx="12" cy="12" r="3.4"/></svg></button>
+          <input class="input num" style="width:70px;padding:7px 8px;min-height:36px;text-align:right" type="number" min="0" step="0.1" value="${pctTxt}" data-price="${sl.id}|${c.pid}">
+          <div class="faint small">%</div></div>
+          <button class="iconbtn" data-sugg="${sl.id}|${c.pid}" title="Consigliato (${pctFmt(p)})"><svg viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M6 6l1.4 1.4M16.6 16.6L18 18M18 6l-1.4 1.4M7.4 16.6L6 18"/><circle cx="12" cy="12" r="3.4"/></svg></button>
           <button class="iconbtn" data-buy="${sl.id}|${c.pid}" title="Segna preso"><svg viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M20 6L9 17l-5-5"/></svg></button>
           <button class="iconbtn" data-rmcand="${sl.id}|${c.pid}" title="Rimuovi">${IC.close}</button></div>`}
     </div>`;}).join('');
@@ -512,8 +512,8 @@ function viewSquadra(){
   let html=`<div class="between" style="margin-bottom:14px"><h1 style="font-size:20px">La tua squadra</h1>
     <span class="tag ${bs.got===25?'green':''}">${bs.got}/25 presi</span></div>
     <div class="card" style="margin-bottom:14px"><div class="row" style="gap:18px">
-      <div><div class="num" style="font-weight:750;font-size:18px">${bs.speso}</div><div class="faint small">speso</div></div>
-      <div><div class="num" style="font-weight:750;font-size:18px;color:${bs.residuo<0?'var(--neg)':'var(--text)'}">${bs.residuo}</div><div class="faint small">residuo</div></div>
+      <div><div class="num" style="font-weight:750;font-size:18px">${fmtPct(bs.speso)}</div><div class="faint small">speso</div></div>
+      <div><div class="num" style="font-weight:750;font-size:18px;color:${bs.residuo<0?'var(--neg)':'var(--text)'}">${fmtPct(bs.residuo)}</div><div class="faint small">residuo</div></div>
       <div><div class="num" style="font-weight:750;font-size:18px">${goalsAttesi(a)}</div><div class="faint small">gol attesi</div></div></div></div>`;
   ROLES.forEach(Rr=>{const slots=a.slots.filter(s=>s.r===Rr);const presi=slots.filter(s=>s.esito),plan=slots.filter(s=>!s.esito);
     html+=`<div class="between" style="margin:16px 0 8px"><h2 style="font-size:15px"><span class="chip ${Rr}">${Rr}</span> ${ROLE_NAME[Rr]}</h2>
@@ -521,10 +521,10 @@ function viewSquadra(){
     const lines=[];
     presi.forEach(sl=>{const p=byId[sl.esito.pid];lines.push(`<div class="slotline"><span class="chip ${Rr}">${Rr}</span>
       <div style="min-width:0"><div class="nm" style="font-weight:600">${esc(p.nome)}</div><div class="mt muted small">${esc(p.sq)}</div></div>
-      <div class="push" style="flex:1"></div><div style="text-align:right"><div class="num" style="font-weight:700">${sl.esito.prezzo}</div><div class="faint small">pagato</div></div></div>`);});
+      <div class="push" style="flex:1"></div><div style="text-align:right"><div class="num" style="font-weight:700">${fmtPct(sl.esito.pct)}</div><div class="faint small">pagato</div></div></div>`);});
     plan.forEach(sl=>{const p=byId[sl.cand[0].pid];lines.push(`<div class="slotline ghost"><span class="chip ${Rr}">${Rr}</span>
       <div style="min-width:0"><div class="nm" style="font-weight:600">${esc(p.nome)} <span class="pref">obiettivo</span></div><div class="mt muted small">${esc(p.sq)}${sl.cand.length>1?' · +'+(sl.cand.length-1)+' alt.':''}</div></div>
-      <div class="push" style="flex:1"></div><div style="text-align:right"><div class="num muted">${cr(sl.cand[0].pct)}</div><div class="faint small">target</div></div></div>`);});
+      <div class="push" style="flex:1"></div><div style="text-align:right"><div class="num muted">${fmtPct(sl.cand[0].pct)}</div><div class="faint small">target</div></div></div>`);});
     const filled=presi.length+plan.length;for(let i=filled;i<ROSA[Rr];i++)lines.push(`<div class="slotline empty-slot"><span class="dot-ph"></span><span class="muted small">slot libero</span></div>`);
     html+=`<div class="card" style="padding:6px 14px">${lines.join('<hr class="sep" style="margin:0">')}</div>`;});
   return html;
@@ -532,17 +532,17 @@ function viewSquadra(){
 
 /* ---- RIEPILOGO ---- */
 function viewRiepilogo(){
-  const a=A(),t=template(a),bs=budgetStats(a),b=bs.b;
+  const a=A(),t=template(a),bs=budgetStats(a);
   const kpi=(v,l,c)=>`<div class="kpi"><div class="v num" ${c?`style="color:${c}"`:''}>${v}</div><div class="l">${l}</div></div>`;
-  const split=ROLES.map(Rr=>{const tg=Math.round(t.ripartizione_pct[Rr]*b),pl=bs.per[Rr].pl,pct=tg?Math.min(100,Math.round(pl/tg*100)):0,over=pl>tg;
+  const split=ROLES.map(Rr=>{const tg=t.ripartizione_pct[Rr],pl=bs.per[Rr].pl,pct=tg?Math.min(100,Math.round(pl/tg*100)):0,over=pl>tg;
     return `<div style="margin:10px 0"><div class="between small"><span><span class="chip ${Rr}">${Rr}</span> ${ROLE_NAME[Rr]}</span>
-      <span class="num" style="${over?'color:var(--neg)':'color:var(--muted)'}">${pl} / ${tg}</span></div>
+      <span class="num" style="${over?'color:var(--neg)':'color:var(--muted)'}">${fmtPct(pl)} / ${fmtPct(tg)}</span></div>
       <div class="bar ${over?'over':''}" style="margin-top:5px"><i style="width:${pct}%"></i></div></div>`;}).join('');
   const goals=goalsAttesi(a);
   return `<div class="between" style="margin-bottom:16px"><div><h1 style="font-size:20px">${esc(a.name)}</h1>
-    <div class="muted small">${a.participants} partecipanti · ${b} mln · ${esc(t.nome)}</div></div>
+    <div class="muted small">${esc(t.nome)}</div>${a.description?`<div class="muted small" style="margin-top:4px">${esc(a.description)}</div>`:''}</div>
     <button class="btn sm" data-act="edit-auction">${IC.edit} Impostazioni</button></div>
-  <div class="grid4" style="margin-bottom:14px">${kpi(bs.speso,'Speso')}${kpi(bs.impegnato,'Impegnato')}${kpi(bs.residuo,'Residuo',bs.residuo<0?'var(--neg)':null)}${kpi(bs.dopo,'Dopo obiettivi',bs.dopo<0?'var(--neg)':'var(--pos)')}</div>
+  <div class="grid4" style="margin-bottom:14px">${kpi(fmtPct(bs.speso),'Speso')}${kpi(fmtPct(bs.impegnato),'Impegnato')}${kpi(fmtPct(bs.residuo),'Residuo',bs.residuo<0?'var(--neg)':null)}${kpi(fmtPct(bs.dopo),'Dopo obiettivi',bs.dopo<0?'var(--neg)':'var(--pos)')}</div>
   <div class="card"><div class="sec-title">Ripartizione budget · ${esc(t.nome)}</div>${split}<div class="muted small" style="margin-top:6px">Cambia strategia nella sezione <b>Strategia</b>.</div></div>
   <div class="card"><div class="between"><span class="small muted">Gol attesi dagli acquisti</span><span class="num">${goals} <span class="faint">/ ~76</span></span></div>
     <div class="bar ${goals>=76?'ok':''}" style="margin-top:6px"><i style="width:${Math.min(100,Math.round(goals/76*100))}%"></i></div></div>`;
@@ -550,9 +550,9 @@ function viewRiepilogo(){
 
 /* ---- STRATEGIA ---- */
 function viewStrategia(){
-  const a=A(),b=a.budget;
+  const a=A();
   const mods=STRAT.template_budget.map(t=>{const on=t.id===a.module;
-    const split=ROLES.map(Rr=>`<span class="tag" style="margin:2px 3px 0 0"><span class="chip ${Rr}" style="width:16px;height:16px;font-size:9px">${Rr}</span> ${Math.round(t.ripartizione_pct[Rr]*b)}</span>`).join('');
+    const split=ROLES.map(Rr=>`<span class="tag" style="margin:2px 3px 0 0"><span class="chip ${Rr}" style="width:16px;height:16px;font-size:9px">${Rr}</span> ${Math.round(t.ripartizione_pct[Rr]*100)}%</span>`).join('');
     return `<div class="card" style="border-color:${on?'var(--accent)':'var(--border)'};${on?'background:var(--accent-soft)':''}">
       <div class="between"><h3 style="font-size:15px">${esc(t.nome)}</h3>${on?'<span class="tag blue">Attiva</span>':`<button class="btn sm" data-setmod="${t.id}">Usa</button>`}</div>
       <div class="muted small" style="margin:6px 0 10px">${esc(t.quando)}</div><div>${split}</div></div>`;}).join('');
@@ -561,7 +561,7 @@ function viewStrategia(){
   const cons=ROLES.map(Rr=>`<div style="margin:10px 0"><div class="small" style="font-weight:600;margin-bottom:4px"><span class="chip ${Rr}">${Rr}</span> ${ROLE_NAME[Rr]}</div>
     <ul class="list-clean muted small" style="margin:0;padding-left:18px">${STRAT.consigli_per_ruolo[Rr].map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
   return `<h1 style="font-size:20px;margin-bottom:6px">Strategia</h1>
-    <p class="muted small" style="margin-bottom:16px">Scegli il modulo: ricalcola la ripartizione sul budget di ${b} mln.</p>${mods}
+    <p class="muted small" style="margin-bottom:16px">Scegli il modulo: ricalcola la ripartizione percentuale del budget.</p>${mods}
     <div class="card"><div class="sec-title">Composizione ideale dei 25</div><ul class="list-clean" style="margin:0;padding-left:20px">${comp}</ul>
       <div class="faint small" style="margin-top:8px">Regola bonus: gol attesi degli 11 titolari ≈ 2 × giornate (~76 su 38).</div></div>
     <div class="card"><div class="sec-title">Consigli per ruolo</div>${cons}</div>
@@ -587,10 +587,10 @@ function detailHtml(pid){
     <button class="iconbtn" data-act="close">${IC.close}</button></div>
   <div style="margin:10px 0">${flagsHtml(p)||'<span class="faint small">—</span>'}</div>
   <div class="grid4" style="margin:14px 0">
-    <div class="kpi"><div class="v num">${p.qtA}</div><div class="l">Quotazione</div></div>
+    <div class="kpi"><div class="v num">${pctFmt(p)}</div><div class="l">Quotazione</div></div>
     <div class="kpi"><div class="v num">${p.fvm}</div><div class="l">FVM</div></div>
     <div class="kpi"><div class="v num arrow ${tm.c}">${tm.a}</div><div class="l">${tm.l}</div></div>
-    ${canAdd?`<div class="kpi"><div class="v num" style="color:var(--accent)">${cr(suggPct(p))}</div><div class="l">Prezzo consigliato</div></div>`:`<div class="kpi"><div class="v num">${media3(p)?media3(p).toFixed(2):'—'}</div><div class="l">Media 3 stagioni</div></div>`}</div>
+    ${canAdd?`<div class="kpi"><div class="v num" style="color:var(--accent)">${pctFmt(p)}</div><div class="l">Prezzo consigliato</div></div>`:`<div class="kpi"><div class="v num">${media3(p)?media3(p).toFixed(2):'—'}</div><div class="l">Media 3 stagioni</div></div>`}</div>
   ${seasonChart(p)?`<div class="card" style="padding:14px 12px 8px;margin-bottom:14px">
     <div class="between" style="margin-bottom:4px"><div class="sec-title" style="margin:0">Andamento per stagione</div>
       <div class="small" style="display:flex;gap:10px"><span style="color:#3b82f6">●&nbsp;Fantamedia</span><span style="color:#34d399">●&nbsp;Media voto</span></div></div>
@@ -615,19 +615,16 @@ function pickerRows(role,q,slotId){q=(q||'').toLowerCase();const chosen=new Set(
   const arr=PLAYERS.filter(p=>p.r===role&&!chosen.has(p.id)&&(!q||p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q))).sort((a,b)=>(b.qtA||0)-(a.qtA||0)).slice(0,60);
   if(!arr.length)return `<div class="empty" style="padding:20px">Nessuno</div>`;
   return arr.map(p=>`<div class="pcard" data-pick="${slotId||''}|${p.id}"><span class="chip ${p.r}">${p.r}</span>
-    <div><div class="nm">${esc(p.nome)}</div><div class="mt">${esc(p.sq)}</div></div><div class="push"></div><div class="qt num">${p.qtA}</div><div class="faint small">qt</div></div>`).join('');}
+    <div><div class="nm">${esc(p.nome)}</div><div class="mt">${esc(p.sq)}</div></div><div class="push"></div><div class="qt num">${pctFmt(p)}</div><div class="faint small">consigl.</div></div>`).join('');}
 function openAuctionModal(mode){
-  const editing=mode==='edit';const a=editing?A():{name:'Asta '+(DB.auctions.length+1),participants:8,budget:500,module:'modificatore_difesa'};
+  const editing=mode==='edit';const a=editing?A():{name:'Strategia '+(DB.auctions.length+1),description:'',module:'modificatore_difesa'};
   openModal(`<div class="between" style="margin-bottom:14px"><h2 style="font-size:18px">${editing?'Impostazioni':'Crea PreAsta'}</h2><button class="iconbtn" data-act="close">${IC.close}</button></div>
     <div class="field"><label for="na-n">Nome</label><input class="input" id="na-n" value="${esc(a.name)}" placeholder="Es. Lega amici…"></div>
-    <div class="field"><label for="na-p">In quanti siete all'asta?</label><input class="input num" id="na-p" type="number" min="2" max="20" value="${a.participants}"></div>
-    <div class="field"><label for="na-b">Budget a disposizione (milioni)</label><input class="input num" id="na-b" type="number" min="1" value="${a.budget}"></div>
+    <div class="field"><label for="na-d">Descrizione</label><textarea class="input" id="na-d" placeholder="Scrivi qui la tua strategia…">${esc(a.description||'')}</textarea></div>
     <div class="field"><label for="na-m">Strategia / modulo</label><select class="input" id="na-m">${STRAT.template_budget.map(t=>`<option value="${t.id}" ${a.module===t.id?'selected':''}>${esc(t.nome)}</option>`).join('')}</select></div>
-    <div class="faint small" style="margin-bottom:14px">I prezzi restano in percentuale: cambiando budget si ricalcolano da soli.</div>
-    <button class="btn primary" data-act="${editing?'save-edit':'save-new'}" style="width:100%">${editing?'Salva':'Crea e apri l\\u0027assistente'}</button>`);}
-function readForm(){const n=$('#na-n').value.trim()||'Asta',p=parseInt($('#na-p').value,10),b=parseInt($('#na-b').value,10),m=$('#na-m').value;
-  if(isNaN(p)||p<2){alert('Numero partecipanti non valido (min 2)');return null;}if(isNaN(b)||b<1){alert('Budget non valido');return null;}
-  return{name:n,participants:p,budget:b,module:m};}
+    <button class="btn primary" data-act="${editing?'save-edit':'save-new'}" style="width:100%">${editing?'Salva':"Crea e apri l'assistente"}</button>`);}
+function readForm(){const n=$('#na-n').value.trim()||'Asta',d=$('#na-d').value.trim(),m=$('#na-m').value;
+  return{name:n,description:d,module:m};}
 
 /* ================= EVENTS ================= */
 document.addEventListener('click',e=>{
@@ -659,17 +656,16 @@ document.addEventListener('click',e=>{
   if(d.addcand){openModal(pickerHtml(A().slots.find(x=>x.id===d.addcand).r,d.addcand));return;}
   if(d.undo){const sl=A().slots.find(x=>x.id===d.undo);if(sl){sl.esito=null;save();render();}return;}
   if(d.buy){const[sid,pid]=d.buy.split('|');const sl=A().slots.find(x=>x.id===sid);const c=sl&&sl.cand.find(x=>x.pid==pid);
-    const val=prompt('A quanti crediti hai preso '+byId[+pid].nome+'?',c?cr(c.pct):0);
-    if(val!==null){const n=parseInt(val,10);if(!isNaN(n)){sl.esito={pid:+pid,prezzo:n};save();render();}}return;}
+    const val=prompt('A che percentuale del budget hai preso '+byId[+pid].nome+'?',c?(c.pct*100).toFixed(1):0);
+    if(val!==null){const n=parseFloat(val);if(!isNaN(n)){sl.esito={pid:+pid,pct:n/100};save();render();}}return;}
   if(d.pick!=null){const[sid,pid]=d.pick.split('|');if(sid)addCand(sid,+pid);else addSlot(+pid);closeModal();render();return;}
 });
 document.addEventListener('input',e=>{const el=e.target;
   if(el.dataset.note!=null){A().notes[el.dataset.note]=el.value;save();return;}
-  if(el.dataset.picker!=null){const[role,slotId]=el.dataset.picker.split('|');$('#pkrows').innerHTML=pickerRows(role,el.value,slotId);return;}
-  if(el.dataset.price!=null){const n=parseInt(el.value,10);const lbl=el.parentElement.querySelector('.faint');if(lbl&&!isNaN(n)&&budget())lbl.textContent=(n/budget()*100).toFixed(1)+'%';}});
+  if(el.dataset.picker!=null){const[role,slotId]=el.dataset.picker.split('|');$('#pkrows').innerHTML=pickerRows(role,el.value,slotId);return;}});
 document.addEventListener('change',e=>{const el=e.target;
-  if(el.dataset.price!=null){const[sid,pid]=el.dataset.price.split('|');const sl=A().slots.find(x=>x.id===sid);const c=sl&&sl.cand.find(x=>x.pid==pid);const n=parseInt(el.value,10);
-    if(c&&!isNaN(n)&&budget()){c.pct=n/budget();save();render();}return;}
+  if(el.dataset.price!=null){const[sid,pid]=el.dataset.price.split('|');const sl=A().slots.find(x=>x.id===sid);const c=sl&&sl.cand.find(x=>x.pid==pid);const n=parseFloat(el.value);
+    if(c&&!isNaN(n)){c.pct=n/100;save();render();}return;}
   if(el.dataset.addto!=null){const pid=+el.dataset.addto,sid=el.value;if(sid){addCand(sid,pid);closeModal();render();}return;}});
 
 render();
