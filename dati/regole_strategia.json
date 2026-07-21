@@ -1,0 +1,91 @@
+{
+  "_meta": {
+    "descrizione": "Regole/strategia d'asta usabili dall'app. Percentuali su budget totale; esempi calcolati su 500 crediti, rosa 3P/8D/8C/6A.",
+    "aggiornato": "2026-07-20",
+    "fonti": [
+      "fantacalcio.it/consigli-fantacalcio/19_08_2025/come-dividere-budget-asta-fantacalcio-480984",
+      "sport.sky.it/fantacalcio/fantacalcio-consigli-asta-errori-da-evitare",
+      "fantapazz.com/guida-asta-fantacalcio-consigli-esperti",
+      "sport.sky.it/fantacalcio/2025/08/05/consigli-fantacalcio-asta-divisione-budget-ruoli",
+      "goal.com/it/liste/consigli-asta-fantacalcio-come-dividere-il-budget"
+    ]
+  },
+  "rosa": { "P": 3, "D": 8, "C": 8, "A": 6, "totale": 25 },
+  "budget_base": 500,
+  "template_budget": [
+    {
+      "id": "attacco_pesante",
+      "nome": "Attacco pesante (3-4-3, senza modificatore)",
+      "modulo": "3-4-3",
+      "quando": "Lega senza modificatore di difesa. L'attacco decide.",
+      "ripartizione_pct": { "P": 0.08, "D": 0.08, "C": 0.25, "A": 0.59 },
+      "esempio_500": { "P": 40, "D": 40, "C": 125, "A": 295 }
+    },
+    {
+      "id": "modificatore_difesa",
+      "nome": "Modificatore difesa (4-3-3)",
+      "modulo": "4-3-3",
+      "quando": "Lega con modificatore di difesa (il più comune). La difesa porta bonus.",
+      "ripartizione_pct": { "P": 0.10, "D": 0.15, "C": 0.21, "A": 0.54 },
+      "esempio_500": { "P": 50, "D": 75, "C": 105, "A": 270 }
+    },
+    {
+      "id": "equilibrato",
+      "nome": "Equilibrato (4-4-2)",
+      "modulo": "4-4-2",
+      "quando": "Compromesso: due punte, centrocampo folto, difesa a 4. Buono nelle leghe a 10.",
+      "ripartizione_pct": { "P": 0.09, "D": 0.13, "C": 0.26, "A": 0.52 },
+      "esempio_500": { "P": 45, "D": 65, "C": 130, "A": 260 }
+    }
+  ],
+  "tetti_reparto_500": {
+    "portieri_max": 45,
+    "difesa_senza_mod_max": 40,
+    "difesa_con_mod": [70, 80],
+    "centrocampo_433_max": 105,
+    "centrocampo_343": [120, 150],
+    "attacco_target": [280, 300],
+    "attacco_442_min": 250
+  },
+  "composizione_rosa": [
+    { "categoria": "Top player", "min": 3, "max": 4, "nota": "Spina dorsale, almeno 1 per reparto" },
+    { "categoria": "Da bonus / voti alti costanti", "min": 7, "max": 8, "nota": "Portano punti ogni giornata" },
+    { "categoria": "Titolari affidabili (giocano sempre)", "min": 7, "max": 8, "nota": "Integri, riempiono l'11 in emergenza" },
+    { "categoria": "Possibili rivelazioni (low-cost)", "min": 5, "max": 6, "nota": "Alto potenziale, pochi crediti" },
+    { "categoria": "Azzardi", "min": 0, "max": 2, "nota": "Cari e rischiosi: non più di 2" }
+  ],
+  "euristiche": {
+    "gol_attesi_titolari": {
+      "formula": "somma_gol_attesi_11_titolari >= 2 * numero_giornate",
+      "esempio_38_giornate": 76,
+      "nota": "Senza bonus non si vince: punta a ~76 gol attesi dagli 11 titolari"
+    },
+    "sforamento_max": { "top_player": 10, "altri": 2, "unita": "crediti sul prezzo pianificato" },
+    "obiettivo_prime_scelte_pct": [0.5, 0.6]
+  },
+  "consigli_per_ruolo": {
+    "P": ["Non superare ~45 cr sul reparto", "Opzione A: top + sue riserve (blocco squadra)", "Opzione B: coppia di squadre diverse che si incrociano (ottimo per modificatore)", "Controlla la griglia portieri"],
+    "D": ["Con modificatore: centrali costanti di club medio-grandi (media >=6) + almeno 1 top + esterni col vizio del gol", "Senza modificatore: spendi poco, solo titolari con qualche bonus", "Preferisci costanza al +1 sporadico del terzino"],
+    "C": ["Evita mediani e centrocampisti difensivi", "Cerca trequartisti, esterni del tridente, mezzali offensive", "I rigoristi valgono un sovrapprezzo", "Gli attaccanti listati 'C' sono oro (bonus da punta, ruolo da centrocampo)"],
+    "A": ["Opzione A: 1 top assoluto (~200 cr) + comprimari fascia media", "Opzione B: 2 semi-top + rotazioni", "I rigoristi valgono di piu' (bonus quasi garantiti)"]
+  },
+  "flag_giocatore": {
+    "rigorista": "Bonus rigore quasi garantiti: alza il valore. Dati: RigTirati/RigSegnati.",
+    "neopromossa": "Cautela titolarità: 'giocava in B != titolare in A'.",
+    "nuovo_arrivo_o_mister": "Titolarità incerta: chiediti a chi ruba minuti.",
+    "exploit_singolo": "Un solo anno di grazia: rischio overperformance, non pagarlo sulla reputazione.",
+    "listato_C_ma_attaccante": "Ruolo C con rendimento offensivo: ottimo rapporto bonus/prezzo."
+  },
+  "errori_da_evitare": [
+    "Cambiare strategia in porta in corsa",
+    "Spesa troppo limitata (braccino corto): arrotonda per eccesso",
+    "Panico sul primo attaccante: prendi presto il tuo bomber",
+    "Alzare sempre il prezzo ai rivali: rischi di tenertelo",
+    "Blocco squadra: e' una superscommessa",
+    "Ricomprare per gratitudine chi ti ha fatto vincere (max 1)",
+    "Dare per scontata la titolarità delle neopromosse (B != A)",
+    "Sottovalutare l'incognita di nuovi mister e nuovi acquisti",
+    "Sforare il budget troppo presto",
+    "Pensare che l'asta andrà come speri: tieni sempre piani B"
+  ]
+}
