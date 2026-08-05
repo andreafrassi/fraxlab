@@ -1,0 +1,1 @@
+window.PLAYER_PHOTOS=[];
