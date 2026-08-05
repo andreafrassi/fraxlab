@@ -4,8 +4,8 @@
    Finché le due costanti qui sotto restano vuote il sito funziona come prima
    (tutto visibile): così pubblicare questo file non rompe nulla. Appena le
    compili, scatta il controllo accessi. */
-const SUPABASE_URL='';
-const SUPABASE_ANON_KEY='';
+const SUPABASE_URL='https://gydmpjucphkqcibggdep.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_MangjGqIvX1_-tFLDRYq5A_nVVC8PhM';
 
 /* Assegnato anche a window: `const` da solo non crea una proprietà di window,
    e core.js si aspetta di poter fare window.AUTH. */
@@ -35,9 +35,12 @@ async function refreshAuth(){
 
 async function authSignUp(email,password){
   if(!sb)return{error:'Login non configurato.'};
-  const{error}=await sb.auth.signUp({email,password});
+  const{data,error}=await sb.auth.signUp({email,password});
   if(error)return{error:error.message};
-  await refreshAuth();authRerender();return{};
+  await refreshAuth();authRerender();
+  /* Se il progetto richiede la conferma via mail non esiste ancora una sessione:
+     va detto, altrimenti sembra che la registrazione non abbia funzionato. */
+  return{needsConfirm:!(data&&data.session)};
 }
 async function authSignIn(email,password){
   if(!sb)return{error:'Login non configurato.'};

@@ -248,6 +248,14 @@ function authModalHtml(msg){
     <div class="faint small" style="margin-top:12px">Dopo la registrazione l'accesso ai dati dei giocatori va approvato manualmente.</div>`;
 }
 function openAuthModal(msg){openModal(authModalHtml(msg));}
+function confirmSentHtml(email){
+  return `<div class="between" style="margin-bottom:14px"><h3 style="margin:0">Controlla la posta</h3>
+    <button class="iconbtn" data-act="close" aria-label="Chiudi">${IC.close}</button></div>
+    <div style="margin-bottom:12px">Ti abbiamo scritto a <b>${esc(email||'')}</b>.</div>
+    <div class="faint small">Apri il link nell'email per confermare l'indirizzo, poi torna qui e accedi.
+    Dopo l'accesso l'amministratore dovrà approvarti per vedere i dati dei giocatori.</div>
+    <button class="btn" data-act="account" style="margin-top:16px">Ho confermato, accedi</button>`;
+}
 
 /* ================= SHARED CHROME ================= */
 const NAVPAGES=[
@@ -528,7 +536,9 @@ document.addEventListener('click',e=>{
     if(!email||!pass){openAuthModal('Inserisci email e password.');return;}
     t.disabled=true;
     (act==='signin'?authSignIn(email,pass):authSignUp(email,pass)).then(r=>{
-      if(r&&r.error)openAuthModal(r.error);else closeModal();
+      if(r&&r.error)openAuthModal(r.error);
+      else if(r&&r.needsConfirm)openModal(confirmSentHtml(email));
+      else closeModal();
     });
     return;}
   if(act==='signout'){closeModal();authSignOut();return;}
