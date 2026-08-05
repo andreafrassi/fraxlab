@@ -24,7 +24,7 @@ function viewAssistente(){
         <input class="input" id="aq" placeholder="Cerca…" value="${esc(f.q)}">
         <select class="input" id="arm"><option value="">Ruolo specifico</option>${mantraCodes.map(c=>`<option value="${c}" ${f.rm===c?'selected':''}>${esc(MANTRA_LABEL[c])}</option>`).join('')}</select>
         <select class="input" id="asq"><option value="">Squadra</option>${teams.map(tm=>`<option ${f.sq===tm?'selected':''}>${tm}</option>`).join('')}</select>
-        <select class="input" id="asort">${sortsFor().filter(s=>s[0]!=='nome'||!canViewStats()).map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
+        <select class="input" id="asort">${SORTS.filter(s=>s[0]!=='nome').map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
       </div>
       <div class="plist">${arr.slice(0,120).map(p=>previewCard(p,null,true,null,true)).join('')}</div>
     </div>

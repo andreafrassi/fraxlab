@@ -76,7 +76,7 @@ function viewGiocatori(lg){
     <select class="input" id="lgr"><option value="">Ruolo</option>${ROLES.map(r=>`<option value="${r}" ${f.r===r?'selected':''}>${r}</option>`).join('')}</select>
     <select class="input" id="lgrm"><option value="">Ruolo specifico</option>${mantraCodes.map(c=>`<option value="${c}" ${f.rm===c?'selected':''}>${esc(MANTRA_LABEL[c])}</option>`).join('')}</select>
     <select class="input" id="lgsq"><option value="">Squadra</option>${teams.map(t=>`<option ${f.sq===t?'selected':''}>${t}</option>`).join('')}</select>
-    <select class="input" id="lgsort">${sortsFor().filter(s=>s[0]!=='nome'||!canViewStats()).map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="input" id="lgsort">${SORTS.filter(s=>s[0]!=='nome').map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
     <select class="input" id="lgstate"><option value="" ${!f.stato?'selected':''}>Tutti</option><option value="liberi" ${f.stato==='liberi'?'selected':''}>Liberi</option><option value="assegnati" ${f.stato==='assegnati'?'selected':''}>Assegnati</option></select>
     ${strat?`<select class="input" id="lgfascia"><option value="">Fascia</option>${SLOT_TAGS.map(([v,l])=>`<option value="${v}" ${f.fascia===v?'selected':''}>${l}</option>`).join('')}</select>`:''}
     <button class="iconbtn" data-act="toggle-hide-data" title="${lg.hideData?'Mostra dati giocatori':'Nascondi dati giocatori'}">${lg.hideData?IC.eyeOff:IC.eye}</button>

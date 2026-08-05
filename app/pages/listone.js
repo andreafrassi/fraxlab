@@ -15,7 +15,7 @@ function renderListoneView(){
     <select class="input" id="lr"><option value="">Ruolo</option>${ROLES.map(r=>`<option value="${r}" ${f.r===r?'selected':''}>${r}</option>`).join('')}</select>
     <select class="input" id="lrm"><option value="">Ruolo specifico</option>${mantraCodes.map(c=>`<option value="${c}" ${f.rm===c?'selected':''}>${esc(MANTRA_LABEL[c])}</option>`).join('')}</select>
     <select class="input" id="lsq"><option value="">Squadra</option>${teams.map(t=>`<option ${f.sq===t?'selected':''}>${t}</option>`).join('')}</select>
-    <select class="input" id="lsort">${sortsFor().map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="input" id="lsort">${SORTS.map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
   </div>
   ${statsNotice()}
   <div class="muted small" style="margin:-4px 0 8px">${arr.length} giocatori</div>

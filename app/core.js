@@ -332,17 +332,13 @@ const LEAGUE_AVG={mv:leagueAvg('mv'),fm:leagueAvg('fm')};
 function weightedStat(p,key){const v=st25(p,key),games=st25(p,'pv');
   if(v==null)return-Infinity;
   return((games||0)*v+PRIOR_GAMES*LEAGUE_AVG[key])/((games||0)+PRIOR_GAMES);}
-function sortArr(arr,s){
-  /* L'ordine stesso rivela la classifica: senza accesso ai dati si ordina solo per nome. */
-  if(!canViewStats())s='nome';
-  arr.sort((a,b)=>{
+function sortArr(arr,s){arr.sort((a,b)=>{
   if(s==='qt')return(b.qtA||0)-(a.qtA||0); if(s==='fvm')return(b.fvm||0)-(a.fvm||0);
   if(s==='fm')return weightedStat(b,'fm')-weightedStat(a,'fm'); if(s==='mv')return weightedStat(b,'mv')-weightedStat(a,'mv');
   if(s==='gf')return(st25(b,'gf')||0)-(st25(a,'gf')||0); if(s==='media3')return media3(b)-media3(a);
   if(s==='pv')return(st25(b,'pv')||0)-(st25(a,'pv')||0); if(s==='tit')return(titIdx(b)||0)-(titIdx(a)||0);
   if(s==='nome')return a.nome.localeCompare(b.nome);return 0;});return arr;}
-const SORTS_FULL=[['qt','Quotazione'],['tit','Titolarità'],['media3','Media 3 stagioni'],['fm','Fantamedia 25/26'],['mv','Media voto 25/26'],['gf','Gol 25/26'],['pv','Presenze 25/26'],['fvm','FVM'],['nome','Nome']];
-const sortsFor=()=>canViewStats()?SORTS_FULL:SORTS_FULL.filter(x=>x[0]==='nome');
+const SORTS=[['qt','Quotazione'],['tit','Titolarità'],['media3','Media 3 stagioni'],['fm','Fantamedia 25/26'],['mv','Media voto 25/26'],['gf','Gol 25/26'],['pv','Presenze 25/26'],['fvm','FVM'],['nome','Nome']];
 const PHOTOS=new Set(window.PLAYER_PHOTOS||[]);
 const playerAvatar=p=>PHOTOS.has(p.id)
   ?`<span class="pavatar"><img src="img/players/${p.id}.webp" alt="" loading="lazy"></span>`
