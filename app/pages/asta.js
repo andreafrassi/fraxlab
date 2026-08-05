@@ -4,6 +4,7 @@ R.tab='assistente';R.phase='P';R.af={q:'',sq:'',rm:'',sort:'media3'};R.openSlot=
 
 /* ---- ASSISTENTE (4 fasi) ---- */
 function viewAssistente(){
+  if(!canViewPlayers())return accessGateHtml('i giocatori e costruire la strategia');
   const a=A(),ph=R.phase;
   const stepper=ROLES.map(Rr=>
     `<div class="step ${ph===Rr?'on':''}" data-phase="${Rr}"><div class="sc"><span class="chip ${Rr}">${Rr}</span></div><div class="sn">${ROLE_NAME[Rr]}</div></div>`).join('');

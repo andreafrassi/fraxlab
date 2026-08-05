@@ -53,6 +53,7 @@ function legaAssignExtra(lg,p){
   return fascia+`<button class="iconbtn" data-assign="${p.id}" title="Assegna a una squadra">${IC.plus}</button>`;
 }
 function viewGiocatori(lg){
+  if(!canViewPlayers())return accessGateHtml('i giocatori');
   const f=R.lf,q=f.q.trim().toLowerCase(),strat=linkedStrategy(lg);
   const teams=[...new Set(PLAYERS.map(p=>p.sq))].sort();
   const byRole=PLAYERS.filter(p=>!f.r||p.r===f.r);

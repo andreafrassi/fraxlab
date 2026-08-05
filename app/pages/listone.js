@@ -1,6 +1,10 @@
 "use strict";
 R.gf={q:'',r:'',sq:'',rm:'',sort:'qt'};
 function renderListoneView(){
+  if(!canViewPlayers()){
+    $('#view').innerHTML=`<div class="between" style="margin-bottom:14px"><h1 style="font-size:20px">Listone</h1><a class="backbtn" href="index.html">${IC.back} Home</a></div>`
+      +accessGateHtml('il listone');
+    return;}
   const f=R.gf,q=f.q.trim().toLowerCase();
   const teams=[...new Set(PLAYERS.map(p=>p.sq))].sort();
   const byRole=PLAYERS.filter(p=>!f.r||p.r===f.r);

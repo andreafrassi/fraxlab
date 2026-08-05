@@ -432,4 +432,8 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
 .duel-name.r{text-align:left}
 .duel-track{flex:1;min-width:40px;height:6px;border-radius:99px;background:var(--surface3);position:relative;overflow:hidden}
 .duel-track i{position:absolute;left:0;top:0;bottom:0;background:var(--grad);border-radius:99px}
+/* pannello admin: pallino stato accesso */
+.acc-dot{width:12px;height:12px;border-radius:99px;flex:none;background:var(--surface3);
+  border:1px solid var(--border2);box-shadow:none}
+.acc-dot.on{background:#3fb950;border-color:#3fb950;box-shadow:0 0 0 3px rgba(63,185,80,.18)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}

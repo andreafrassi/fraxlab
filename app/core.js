@@ -150,7 +150,10 @@ const IC={
   spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>',
   eye:'<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff:'<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7c1.7 0 3.2.4 4.5 1M22 12s-3.6 7-10 7c-1.7 0-3.2-.4-4.5-1M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>',
-  pitch:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="3.2"/></svg>'
+  pitch:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="3.2"/></svg>',
+  lock:'<svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  shield:'<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 9.1-8 11-4.6-1.9-8-6-8-11V5z"/></svg>'
 };
 const SIC={
   eta:'<svg viewBox="0 0 16 16"><circle cx="8" cy="5.5" r="2.5"/><path d="M3.5 13.5a4.5 4.5 0 0 1 9 0"/></svg>',
@@ -188,6 +191,64 @@ function portiereBadge(p){
   return `<span class="tag ${cls}" title="Griglia portieri 2026/27: con ${esc(g.team)} si sovrappongono solo ${g.overlap} partite in casa su 38 giornate">${esc(label)}: ${esc(g.team)}</span>`;
 }
 
+/* ================= ACCESS CONTROL =================
+   Se Supabase non è configurato (AUTH.configured false) tutto resta visibile
+   come prima: il sito non si blocca da solo per una svista di setup. */
+const isAdmin=()=>!!(window.AUTH&&AUTH.profile&&AUTH.profile.is_admin);
+function canViewPlayers(){
+  if(!window.AUTH||!AUTH.configured)return true;
+  if(!AUTH.ready)return false;
+  return !!(AUTH.profile&&(AUTH.profile.can_view_players||AUTH.profile.is_admin));
+}
+/* Stato leggibile per decidere il messaggio da mostrare. */
+function accessState(){
+  if(!window.AUTH||!AUTH.configured)return'ok';
+  if(!AUTH.ready)return'loading';
+  if(!AUTH.user)return'anon';
+  if(AUTH.profile&&(AUTH.profile.can_view_players||AUTH.profile.is_admin))return'ok';
+  return'pending';
+}
+function accessGateHtml(what){
+  const s=accessState(),cosa=what||'queste informazioni';
+  if(s==='loading')return`<div class="empty">${IC.clock}<div>Un attimo…</div></div>`;
+  if(s==='anon')return`<div class="empty">${IC.lock}
+    <div>Accedi per vedere ${esc(cosa)}</div>
+    <div class="small" style="margin-top:6px">Registrati e chiedi l'accesso: verrà approvato manualmente.</div>
+    <button class="btn primary" data-act="account" style="margin:16px auto 0">Accedi o registrati</button></div>`;
+  return`<div class="empty">${IC.clock}
+    <div>Accesso in attesa di approvazione</div>
+    <div class="small" style="margin-top:6px">Il tuo account è registrato: appena viene approvato vedrai ${esc(cosa)}.</div></div>`;
+}
+function authModalHtml(msg){
+  const head=`<div class="between" style="margin-bottom:14px"><h3 style="margin:0">Il tuo account</h3>
+    <button class="iconbtn" data-act="close" aria-label="Chiudi">${IC.close}</button></div>`;
+  if(!window.AUTH||!AUTH.configured)return`${head}<div class="faint small">Il login non è ancora configurato su questo sito.</div>`;
+  if(AUTH.user){
+    const st=accessState();
+    const badge=st==='ok'
+      ?`<span class="tag green">accesso completo</span>`
+      :`<span class="tag amber">in attesa di approvazione</span>`;
+    return`${head}
+      <div class="field"><label>Sei collegato come</label><div><b>${esc(AUTH.user.email||'')}</b></div></div>
+      <div class="field"><label>Stato</label><div>${badge}${isAdmin()?' <span class="tag violet">admin</span>':''}</div></div>
+      ${st==='ok'?'':`<div class="faint small" style="margin-bottom:14px">L'amministratore deve approvare il tuo account prima che tu possa vedere i dati dei giocatori.</div>`}
+      ${isAdmin()?`<a class="btn" href="admin.html" style="margin-bottom:8px">${IC.shield} Pannello admin</a>`:''}
+      <button class="btn" data-act="signout">Esci</button>`;
+  }
+  return`${head}
+    ${msg?`<div class="tag red" style="display:block;margin-bottom:12px;padding:8px 10px">${esc(msg)}</div>`:''}
+    <div class="field"><label for="au-email">Email</label>
+      <input class="input" id="au-email" type="email" autocomplete="email" placeholder="tua@email.it"></div>
+    <div class="field"><label for="au-pass">Password</label>
+      <input class="input" id="au-pass" type="password" autocomplete="current-password" placeholder="almeno 6 caratteri"></div>
+    <div class="row" style="gap:8px">
+      <button class="btn primary" data-act="signin">Accedi</button>
+      <button class="btn" data-act="signup">Registrati</button>
+    </div>
+    <div class="faint small" style="margin-top:12px">Dopo la registrazione l'accesso ai dati dei giocatori va approvato manualmente.</div>`;
+}
+function openAuthModal(msg){openModal(authModalHtml(msg));}
+
 /* ================= SHARED CHROME ================= */
 const NAVPAGES=[
   {key:'aste',href:'aste.html',label:'Le tue strategie'},
@@ -195,24 +256,42 @@ const NAVPAGES=[
   {key:'guida',href:'guida.html',label:"Guida all'asta"},
   {key:'consigli',href:'consigli.html',label:'Consigli'}
 ];
+function initials(email){
+  const n=(email||'').split('@')[0].replace(/[._-]+/g,' ').trim().split(/\s+/);
+  return((n[0]||'?')[0]+(n[1]?n[1][0]:'')).toUpperCase();
+}
+function avatarLabel(){
+  if(!window.AUTH||!AUTH.configured)return'AF';
+  if(!AUTH.ready)return'·';
+  return AUTH.user?esc(initials(AUTH.user.email)):IC.lock;
+}
+function avatarTitle(){
+  const s=accessState();
+  if(s==='anon')return'Accedi o registrati';
+  if(s==='pending')return'Accesso in attesa di approvazione';
+  return window.AUTH&&AUTH.user?(AUTH.user.email||'Account'):'Account';
+}
 function renderTop(activeKey){
   const a=A();
   const logo=`<a class="logo" href="index.html"><span class="mark">${IC.flask}</span> Frax<b>Lab</b></a>`;
   const nav=`<nav class="topnav"><a class="topnav-item cta${activeKey==='leghe'?' on':''}" href="leghe.html">${IC.gavel} Asta</a>`
-    +NAVPAGES.map(n=>`<a class="topnav-item${n.key===activeKey?' on':''}" href="${n.href}">${esc(n.label)}</a>`).join('')+`</nav>`;
-  const search=`<div class="search"><span class="ic">${IC.search}</span>
+    +NAVPAGES.map(n=>`<a class="topnav-item${n.key===activeKey?' on':''}" href="${n.href}">${esc(n.label)}</a>`).join('')
+    +(isAdmin()?`<a class="topnav-item${activeKey==='admin'?' on':''}" href="admin.html">Admin</a>`:'')+`</nav>`;
+  const search=canViewPlayers()?`<div class="search"><span class="ic">${IC.search}</span>
       <input id="gsearch" placeholder="Cerca giocatore…" value="${esc(R.search)}" autocomplete="off" aria-label="Cerca giocatore">
-      <div id="sres"></div></div>`;
+      <div id="sres"></div></div>`:`<div class="search"></div>`;
   const right=`<div class="tb-right">`
     +(a?`<div class="budgetpill tag blue">Residuo ${fmtCr(budgetStats(a).residuo)}</div>`
         +`<a class="backbtn" href="aste.html">${IC.back} Strategie</a>`:'')
-    +`<button class="avatar" title="Profilo (in arrivo)" aria-label="Profilo">AF</button></div>`;
+    +`<button class="avatar" data-act="account" title="${esc(avatarTitle())}" aria-label="Account">${avatarLabel()}</button></div>`;
   $('#topbar').innerHTML=logo+nav+search+right;
   const gi=$('#gsearch');if(gi){gi.addEventListener('input',e=>{R.search=e.target.value;renderSearch();});
     gi.addEventListener('focus',renderSearch);}
 }
 function renderSearch(){
-  const box=$('#sres'); if(!box)return; const q=R.search.trim().toLowerCase();
+  const box=$('#sres'); if(!box)return;
+  if(!canViewPlayers()){box.innerHTML='';return;}
+  const q=R.search.trim().toLowerCase();
   if(q.length<2){box.innerHTML='';return;}
   const arr=PLAYERS.filter(p=>p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q)).slice(0,8);
   if(!arr.length){box.innerHTML='';return;}
@@ -315,6 +394,7 @@ function duelList(sq,pairs){
 }
 const FORM_EXTRA_TEAMS=[];
 function viewFormazioni(){
+  if(!canViewPlayers())return`<div class="sec-title">Formazioni squadre</div>`+accessGateHtml('le formazioni');
   const serieA=[...new Set(PLAYERS.map(p=>p.sq))].sort();
   const withData=serieA.filter(t=>TEAM_FORMATIONS[t]);
   const noData=serieA.filter(t=>!TEAM_FORMATIONS[t]);
@@ -442,7 +522,19 @@ document.addEventListener('click',e=>{
   if(act==='add-obj'){openObjectiveModal(+d.pid);return;}
   if(act==='save-objective'){const tag=$('#oa-tag').value,crv=parseFloat($('#oa-cr').value);
     addSlot(+d.pid,{tag,pct:isNaN(crv)?undefined:creditsToPct(crv)});closeModal();if(typeof render==='function')render();return;}
-  if(d.open){openDetail(+d.open);return;}
+  if(act==='account'){openAuthModal();return;}
+  if(act==='signin'||act==='signup'){
+    const email=($('#au-email')||{}).value,pass=($('#au-pass')||{}).value;
+    if(!email||!pass){openAuthModal('Inserisci email e password.');return;}
+    t.disabled=true;
+    (act==='signin'?authSignIn(email,pass):authSignUp(email,pass)).then(r=>{
+      if(r&&r.error)openAuthModal(r.error);else closeModal();
+    });
+    return;}
+  if(act==='signout'){closeModal();authSignOut();return;}
+  if(d.open){
+    if(!canViewPlayers()){openAuthModal();return;}
+    openDetail(+d.open);return;}
   if(d.add!=null&&d.add!==''){const pid=+d.add;const sl=slotOf(pid);
     if(sl){removeCand(sl.id,pid);if(typeof render==='function')render();}else{openObjectiveModal(pid);}return;}
 });
