@@ -4,7 +4,6 @@ R.tab='assistente';R.phase='P';R.af={q:'',sq:'',rm:'',sort:'media3'};R.openSlot=
 
 /* ---- ASSISTENTE (4 fasi) ---- */
 function viewAssistente(){
-  if(!canViewPlayers())return accessGateHtml('i giocatori e costruire la strategia');
   const a=A(),ph=R.phase;
   const stepper=ROLES.map(Rr=>
     `<div class="step ${ph===Rr?'on':''}" data-phase="${Rr}"><div class="sc"><span class="chip ${Rr}">${Rr}</span></div><div class="sn">${ROLE_NAME[Rr]}</div></div>`).join('');
@@ -25,7 +24,7 @@ function viewAssistente(){
         <input class="input" id="aq" placeholder="Cerca…" value="${esc(f.q)}">
         <select class="input" id="arm"><option value="">Ruolo specifico</option>${mantraCodes.map(c=>`<option value="${c}" ${f.rm===c?'selected':''}>${esc(MANTRA_LABEL[c])}</option>`).join('')}</select>
         <select class="input" id="asq"><option value="">Squadra</option>${teams.map(tm=>`<option ${f.sq===tm?'selected':''}>${tm}</option>`).join('')}</select>
-        <select class="input" id="asort">${SORTS.filter(s=>s[0]!=='nome').map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
+        <select class="input" id="asort">${sortsFor().filter(s=>s[0]!=='nome'||!canViewStats()).map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select>
       </div>
       <div class="plist">${arr.slice(0,120).map(p=>previewCard(p,null,true,null,true)).join('')}</div>
     </div>
@@ -45,11 +44,11 @@ function viewAssistente(){
    fascia box to move it there (also works on an empty box). ---- */
 function objTile(p,cls,label,mine){
   return `<div class="obj-tile filled ${cls}"
-    title="${esc(p.nome)} · consigliato ${officialCredits(p)} cr · tuo ${fmtCr(mine)} · trascina per spostare tra le fasce">
+    title="${esc(p.nome)}${canViewStats()?` · consigliato ${officialCredits(p)} cr`:''} · tuo ${fmtCr(mine)} · trascina per spostare tra le fasce">
     <div class="ot-left"><div class="ot-head"><span class="chip ${p.r}">${p.r}</span><div class="ot-name">${esc(p.nome)}</div></div>
       ${label?`<span class="ot-tag ${cls}">${label}</span>`:''}</div>
     <div class="ot-prices">
-      <div class="ot-price"><span>Prezzo consigliato</span><b>${officialCredits(p)}</b></div>
+      ${canViewStats()?`<div class="ot-price"><span>Prezzo consigliato</span><b>${officialCredits(p)}</b></div>`:''}
       <div class="ot-price mine"><span>Il tuo prezzo</span><b>${pctToCredits(mine)}</b></div>
     </div>
     </div>`;
@@ -93,7 +92,7 @@ function slotCard(sl){
   const crTxt=pctToCredits(c.pct);
   const topPrice=resolved
     ?`<div class="num" style="font-weight:750;font-size:19px;color:var(--pos)">${fmtCr(sl.esito.pct)}</div><div class="faint small">pagato</div>`
-    :`<div class="num" style="font-weight:750;font-size:19px;color:var(--accent)">${officialCredits(p)} cr</div><div class="faint small">consigliato</div>`;
+    :(canViewStats()?`<div class="num" style="font-weight:750;font-size:19px;color:var(--accent)">${officialCredits(p)} cr</div><div class="faint small">consigliato</div>`:'');
   const row=`<div style="padding:10px 0">
       <div class="between" style="align-items:flex-start;gap:10px;margin-bottom:9px">
         <div class="nm" style="font-weight:700;font-size:17px;min-width:0">${esc(p.nome)} ${resolved?'<span class="tag green">PRESO</span>':''}</div>
@@ -101,7 +100,7 @@ function slotCard(sl){
       </div>
       <div class="between" style="align-items:flex-end;flex-wrap:wrap;gap:8px">
         <div class="row" style="min-width:0"><span class="chip ${p.r}">${p.r}</span>
-          <div class="mt muted small">${esc(p.sq)} · FM ${fm(p,'25/26')!=null?fm(p,'25/26').toFixed(2):'—'}</div>
+          <div class="mt muted small">${esc(p.sq)}${canViewStats()?` · FM ${fm(p,'25/26')!=null?fm(p,'25/26').toFixed(2):'—'}`:''}</div>
           <button class="iconbtn" data-open="${p.id}" title="Vedi scheda giocatore">${IC.list}</button></div>
         ${resolved?'':
           `<div class="pricebox">
@@ -126,7 +125,7 @@ function pickerRows(role,q){q=(q||'').toLowerCase();const chosen=new Set();A().s
   const arr=PLAYERS.filter(p=>p.r===role&&!chosen.has(p.id)&&(!q||p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q))).sort((a,b)=>(b.qtA||0)-(a.qtA||0)).slice(0,60);
   if(!arr.length)return `<div class="empty" style="padding:20px">Nessuno</div>`;
   return arr.map(p=>`<div class="pcard" data-pick="${p.id}"><span class="chip ${p.r}">${p.r}</span>
-    <div><div class="nm">${esc(p.nome)}</div><div class="mt">${esc(p.sq)}</div></div><div class="push"></div><div class="qt num">${pctFmt(p)}</div><div class="faint small">consigl.</div></div>`).join('');}
+    <div><div class="nm">${esc(p.nome)}</div><div class="mt">${esc(p.sq)}</div></div><div class="push"></div>${canViewStats()?`<div class="qt num">${pctFmt(p)}</div><div class="faint small">consigl.</div>`:''}</div>`).join('');}
 
 /* ---- workspace nav + render ---- */
 function renderNav(){

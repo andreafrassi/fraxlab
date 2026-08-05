@@ -195,7 +195,9 @@ function portiereBadge(p){
    Se Supabase non è configurato (AUTH.configured false) tutto resta visibile
    come prima: il sito non si blocca da solo per una svista di setup. */
 const isAdmin=()=>!!(window.AUTH&&AUTH.profile&&AUTH.profile.is_admin);
-function canViewPlayers(){
+/* Chiunque può usare l'app e vedere nome/squadra/ruolo dei giocatori.
+   Statistiche, quotazioni e scheda dettaglio sono riservate agli approvati. */
+function canViewStats(){
   if(!window.AUTH||!AUTH.configured)return true;
   if(!AUTH.ready)return false;
   return !!(AUTH.profile&&(AUTH.profile.can_view_players||AUTH.profile.is_admin));
@@ -208,16 +210,29 @@ function accessState(){
   if(AUTH.profile&&(AUTH.profile.can_view_players||AUTH.profile.is_admin))return'ok';
   return'pending';
 }
-function accessGateHtml(what){
-  const s=accessState(),cosa=what||'queste informazioni';
-  if(s==='loading')return`<div class="empty">${IC.clock}<div>Un attimo…</div></div>`;
-  if(s==='anon')return`<div class="empty">${IC.lock}
-    <div>Accedi per vedere ${esc(cosa)}</div>
-    <div class="small" style="margin-top:6px">Registrati e chiedi l'accesso: verrà approvato manualmente.</div>
-    <button class="btn primary" data-act="account" style="margin:16px auto 0">Accedi o registrati</button></div>`;
-  return`<div class="empty">${IC.clock}
-    <div>Accesso in attesa di approvazione</div>
-    <div class="small" style="margin-top:6px">Il tuo account è registrato: appena viene approvato vedrai ${esc(cosa)}.</div></div>`;
+/* Banner discreto in cima alle pagine con giocatori. */
+function statsNotice(){
+  if(canViewStats())return'';
+  const s=accessState();
+  if(s==='loading')return'';
+  if(s==='anon')return`<div class="stats-notice">${IC.lock}
+    <div><b>Statistiche e quotazioni nascoste.</b> Accedi e fatti approvare per vederle.</div>
+    <button class="btn sm primary" data-act="account">Accedi</button></div>`;
+  return`<div class="stats-notice">${IC.clock}
+    <div><b>Statistiche e quotazioni nascoste.</b> Il tuo accesso è in attesa di approvazione.</div></div>`;
+}
+/* Modale mostrata quando un non approvato prova ad aprire la scheda giocatore. */
+function statsBlockedHtml(){
+  const s=accessState();
+  const head=`<div class="between" style="margin-bottom:14px"><h3 style="margin:0">Scheda riservata</h3>
+    <button class="iconbtn" data-act="close" aria-label="Chiudi">${IC.close}</button></div>`;
+  if(s==='anon')return`${head}
+    <div style="margin-bottom:12px">Le schede con statistiche, quotazioni e andamento sono riservate.</div>
+    <div class="faint small">Registrati e chiedi l'accesso: verrà approvato manualmente.</div>
+    <button class="btn primary" data-act="account" style="margin-top:16px">Accedi o registrati</button>`;
+  return`${head}
+    <div style="margin-bottom:12px">Le schede con statistiche e quotazioni sono riservate.</div>
+    <div class="faint small">Il tuo account è registrato: appena viene approvato potrai aprirle.</div>`;
 }
 function authModalHtml(msg){
   const head=`<div class="between" style="margin-bottom:14px"><h3 style="margin:0">Il tuo account</h3>
@@ -285,9 +300,9 @@ function renderTop(activeKey){
   const nav=`<nav class="topnav"><a class="topnav-item cta${activeKey==='leghe'?' on':''}" href="leghe.html">${IC.gavel} Asta</a>`
     +NAVPAGES.map(n=>`<a class="topnav-item${n.key===activeKey?' on':''}" href="${n.href}">${esc(n.label)}</a>`).join('')
     +(isAdmin()?`<a class="topnav-item${activeKey==='admin'?' on':''}" href="admin.html">Admin</a>`:'')+`</nav>`;
-  const search=canViewPlayers()?`<div class="search"><span class="ic">${IC.search}</span>
+  const search=`<div class="search"><span class="ic">${IC.search}</span>
       <input id="gsearch" placeholder="Cerca giocatore…" value="${esc(R.search)}" autocomplete="off" aria-label="Cerca giocatore">
-      <div id="sres"></div></div>`:`<div class="search"></div>`;
+      <div id="sres"></div></div>`;
   const right=`<div class="tb-right">`
     +(a?`<div class="budgetpill tag blue">Residuo ${fmtCr(budgetStats(a).residuo)}</div>`
         +`<a class="backbtn" href="aste.html">${IC.back} Strategie</a>`:'')
@@ -298,7 +313,6 @@ function renderTop(activeKey){
 }
 function renderSearch(){
   const box=$('#sres'); if(!box)return;
-  if(!canViewPlayers()){box.innerHTML='';return;}
   const q=R.search.trim().toLowerCase();
   if(q.length<2){box.innerHTML='';return;}
   const arr=PLAYERS.filter(p=>p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q)).slice(0,8);
@@ -306,7 +320,7 @@ function renderSearch(){
   box.className='sresults';
   box.innerHTML=arr.map(p=>`<div class="pcard" data-open="${p.id}"><span class="chip ${p.r}">${p.r}</span>
     <div><div class="nm">${esc(p.nome)}</div><div class="mt">${esc(p.sq)}</div></div><div class="push"></div>
-    <div class="qt num">${pctFmt(p)}</div><div class="faint small">valore</div></div>`).join('');
+    ${canViewStats()?`<div class="qt num">${pctFmt(p)}</div><div class="faint small">valore</div>`:''}</div>`).join('');
 }
 
 /* ---- listone helpers (shared: listone page + in-workspace player picker) ---- */
@@ -318,13 +332,17 @@ const LEAGUE_AVG={mv:leagueAvg('mv'),fm:leagueAvg('fm')};
 function weightedStat(p,key){const v=st25(p,key),games=st25(p,'pv');
   if(v==null)return-Infinity;
   return((games||0)*v+PRIOR_GAMES*LEAGUE_AVG[key])/((games||0)+PRIOR_GAMES);}
-function sortArr(arr,s){arr.sort((a,b)=>{
+function sortArr(arr,s){
+  /* L'ordine stesso rivela la classifica: senza accesso ai dati si ordina solo per nome. */
+  if(!canViewStats())s='nome';
+  arr.sort((a,b)=>{
   if(s==='qt')return(b.qtA||0)-(a.qtA||0); if(s==='fvm')return(b.fvm||0)-(a.fvm||0);
   if(s==='fm')return weightedStat(b,'fm')-weightedStat(a,'fm'); if(s==='mv')return weightedStat(b,'mv')-weightedStat(a,'mv');
   if(s==='gf')return(st25(b,'gf')||0)-(st25(a,'gf')||0); if(s==='media3')return media3(b)-media3(a);
   if(s==='pv')return(st25(b,'pv')||0)-(st25(a,'pv')||0); if(s==='tit')return(titIdx(b)||0)-(titIdx(a)||0);
   if(s==='nome')return a.nome.localeCompare(b.nome);return 0;});return arr;}
-const SORTS=[['qt','Quotazione'],['tit','Titolarità'],['media3','Media 3 stagioni'],['fm','Fantamedia 25/26'],['mv','Media voto 25/26'],['gf','Gol 25/26'],['pv','Presenze 25/26'],['fvm','FVM'],['nome','Nome']];
+const SORTS_FULL=[['qt','Quotazione'],['tit','Titolarità'],['media3','Media 3 stagioni'],['fm','Fantamedia 25/26'],['mv','Media voto 25/26'],['gf','Gol 25/26'],['pv','Presenze 25/26'],['fvm','FVM'],['nome','Nome']];
+const sortsFor=()=>canViewStats()?SORTS_FULL:SORTS_FULL.filter(x=>x[0]==='nome');
 const PHOTOS=new Set(window.PLAYER_PHOTOS||[]);
 const playerAvatar=p=>PHOTOS.has(p.id)
   ?`<span class="pavatar"><img src="img/players/${p.id}.webp" alt="" loading="lazy"></span>`
@@ -341,9 +359,14 @@ function previewCard(p,extra,showMantra,targetPct,hideQt){
   const qtBadge=hideQt?'':targetPct!=null
     ?`<span class="sp target" title="Quanto avevi deciso di spendere nella tua strategia">${SIC.qt||''}Il tuo prezzo<b>${pctToCredits(targetPct)} cr</b></span>`
     :sp('qt','Quotazione',`${fmtPct(contextPct(p,budget))} · ${officialCredits(p)} cr`);
-  const stats=[qtBadge,sp('eta','Età',p.age),sp('mv','Voto',mv!=null?mv.toFixed(2):null),sp('fm','Fantamedia',f!=null?f.toFixed(2):null),
-    c1,c2,sp('pr','Presenze',pv),titBar(p),sp('fvm','FVM',p.fvm!=null?fmtPct(p.fvm/1000):null),sband,pband].join('');
-  const tier=p.tiers['25/26']?tierBadge(p.tiers['25/26']):'';
+  /* Ai non approvati resta solo l'identità: niente numeri, niente fascia.
+     Il prezzo deciso da loro nella propria strategia però resta visibile. */
+  const full=canViewStats();
+  const stats=full
+    ?[qtBadge,sp('eta','Età',p.age),sp('mv','Voto',mv!=null?mv.toFixed(2):null),sp('fm','Fantamedia',f!=null?f.toFixed(2):null),
+      c1,c2,sp('pr','Presenze',pv),titBar(p),sp('fvm','FVM',p.fvm!=null?fmtPct(p.fvm/1000):null),sband,pband].join('')
+    :(targetPct!=null?qtBadge:'');
+  const tier=full&&p.tiers['25/26']?tierBadge(p.tiers['25/26']):'';
   return `<div class="pcard" data-open="${p.id}">${showMantra?playerAvatar(p):`<span class="chip ${p.r}">${p.r}</span>`}
     <div class="pmid"><div class="pname">${esc(p.nome)}
       ${p.flags.includes('rigorista')?'<span class="tag gold" style="padding:1px 6px">rig</span>':''}</div>
@@ -402,7 +425,6 @@ function duelList(sq,pairs){
 }
 const FORM_EXTRA_TEAMS=[];
 function viewFormazioni(){
-  if(!canViewPlayers())return`<div class="sec-title">Formazioni squadre</div>`+accessGateHtml('le formazioni');
   const serieA=[...new Set(PLAYERS.map(p=>p.sq))].sort();
   const withData=serieA.filter(t=>TEAM_FORMATIONS[t]);
   const noData=serieA.filter(t=>!TEAM_FORMATIONS[t]);
@@ -543,7 +565,7 @@ document.addEventListener('click',e=>{
     return;}
   if(act==='signout'){closeModal();authSignOut();return;}
   if(d.open){
-    if(!canViewPlayers()){openAuthModal();return;}
+    if(!canViewStats()){openModal(statsBlockedHtml());return;}
     openDetail(+d.open);return;}
   if(d.add!=null&&d.add!==''){const pid=+d.add;const sl=slotOf(pid);
     if(sl){removeCand(sl.id,pid);if(typeof render==='function')render();}else{openObjectiveModal(pid);}return;}

@@ -432,6 +432,12 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
 .duel-name.r{text-align:left}
 .duel-track{flex:1;min-width:40px;height:6px;border-radius:99px;background:var(--surface3);position:relative;overflow:hidden}
 .duel-track i{position:absolute;left:0;top:0;bottom:0;background:var(--grad);border-radius:99px}
+/* avviso "statistiche nascoste" */
+.stats-notice{display:flex;align-items:center;gap:10px;padding:11px 14px;margin:0 0 14px;
+  border:1px solid var(--border2);border-radius:12px;background:var(--surface2);color:var(--muted);font-size:13px}
+.stats-notice svg{width:18px;height:18px;flex:none;stroke:var(--faint);fill:none;stroke-width:1.8}
+.stats-notice b{color:var(--text);font-weight:600}
+.stats-notice .btn{margin-left:auto;flex:none}
 /* pannello admin: pallino stato accesso */
 .acc-dot{width:12px;height:12px;border-radius:99px;flex:none;background:var(--surface3);
   border:1px solid var(--border2);box-shadow:none}
