@@ -206,7 +206,7 @@ function renderTop(activeKey){
   const right=`<div class="tb-right">`
     +(a?`<div class="budgetpill tag blue">Residuo ${fmtCr(budgetStats(a).residuo)}</div>`
         +`<a class="backbtn" href="aste.html">${IC.back} Strategie</a>`:'')
-    +`<button class="avatar" title="Profilo (in arrivo)" aria-label="Profilo">MA</button></div>`;
+    +`<button class="avatar" title="Profilo (in arrivo)" aria-label="Profilo">AF</button></div>`;
   $('#topbar').innerHTML=logo+nav+search+right;
   const gi=$('#gsearch');if(gi){gi.addEventListener('input',e=>{R.search=e.target.value;renderSearch();});
     gi.addEventListener('focus',renderSearch);}
