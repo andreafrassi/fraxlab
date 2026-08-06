@@ -181,7 +181,10 @@ function auctionBadge(p){
   const prev=EALLORACHECCAZZO_PREV&&EALLORACHECCAZZO_PREV[p.id];
   if(!prev)return'';
   const[team,costo]=prev;
-  return `<span class="tag gold" title="Pagato il ${esc(fmtPct(costo/1000))} del budget da ${esc(team)} nell'asta Ealloracheccazzo 25/26">${SIC.trophy}Prezzo Ealloracheccazzo 25/26<b>${fmtPct(costo/1000)}</b></span>`;
+  /* Quella lega aveva 1000 crediti: il prezzo va riportato sulla base 500
+     usata ovunque nell'app, altrimenti non è confrontabile con le quotazioni. */
+  const pct=costo/1000,cr=pctToCredits(pct);
+  return `<span class="tag gold" title="Pagato da ${esc(team)} nell'asta Ealloracheccazzo 25/26: ${costo} crediti su 1000, cioè il ${esc(fmtPct(pct))} del budget (${cr} cr su base ${STRAT_BUDGET})">${SIC.trophy}Prezzo Ealloracheccazzo 25/26<b>${fmtPct(pct)} · ${cr} cr</b></span>`;
 }
 function portiereBadge(p){
   const g=window.GRIGLIA_PORTIERI&&GRIGLIA_PORTIERI[p.sq];
