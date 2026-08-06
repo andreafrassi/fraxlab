@@ -107,13 +107,19 @@ function viewLega(lg){
 }
 function legaSettingsHtml(lg){
   const stratOpts=DB.auctions.map(a=>`<option value="${a.id}" ${lg.linkedStrategyId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
+  /* Se è già collegata a una strategia, i crediti partono allineati a quella
+     strategia (anche se nel frattempo il suo budget è cambiato altrove). */
+  const linked=lg.linkedStrategyId&&DB.auctions.find(a=>a.id===lg.linkedStrategyId);
+  const bval=linked?(linked.budget||500):lg.budget;
   return `<div class="between" style="margin-bottom:14px"><h2 style="font-size:18px">Impostazioni asta</h2><button class="iconbtn" data-act="close">${IC.close}</button></div>
     <div class="field"><label for="lgs-n">Nome</label><input class="input" id="lgs-n" value="${esc(lg.name)}"></div>
     <div class="field"><label for="lgs-t">Numero di squadre</label><input class="input num" id="lgs-t" type="number" min="2" max="20" value="${lg.teams.length}"></div>
-    <div class="field"><label for="lgs-b">Crediti per squadra</label><input class="input num" id="lgs-b" type="number" min="1" value="${lg.budget}"></div>
     <div class="field"><label for="lgs-strat">Strategia collegata</label>
       <select class="input" id="lgs-strat"><option value="">Nessuna</option>${stratOpts}</select>
-      <div class="faint small" style="margin-top:4px">I giocatori che avevi messo in TOP/SEMI-TOP/ecc. in quella strategia mostreranno la fascia nella lista giocatori.</div></div>
+      <div class="faint small" style="margin-top:4px">I giocatori che avevi messo in TOP/SEMI-TOP/ecc. in quella strategia mostreranno la fascia nella lista giocatori, e i crediti per squadra si allineano al budget della strategia.</div></div>
+    <div class="field"><label for="lgs-b">Crediti per squadra</label>
+      <input class="input num" id="lgs-b" type="number" min="1" value="${bval}" ${linked?'readonly':''}>
+      ${linked?`<div class="faint small" style="margin-top:4px">Segue automaticamente i crediti della strategia collegata. Scollega la strategia per impostarli a mano.</div>`:''}</div>
     <button class="btn primary" data-act="save-lega-settings" style="width:100%">Salva</button>`;
 }
 function assignModalHtml(pid){
@@ -163,5 +169,15 @@ document.addEventListener('click',e=>{
     const pid=+d.pid,p=byId[pid],teamId=$('#as-team').value,price=parseFloat($('#as-price').value);
     if(teamRoleCount(lg,teamId,p.r,pid)>=ROSA[p.r]){alert('Questa squadra ha già il massimo di '+ROSA[p.r]+' '+ROLE_NAME[p.r].toLowerCase()+'.');return;}
     assignPlayer(lg,pid,teamId,price);closeModal();render();return;}
+});
+/* Cambiando la strategia collegata nel modale impostazioni, i crediti per
+   squadra seguono subito quella strategia (o tornano modificabili a mano
+   se si sceglie "Nessuna"), senza dover chiudere e riaprire il modale. */
+document.addEventListener('change',e=>{
+  if(e.target.id!=='lgs-strat')return;
+  const bInput=$('#lgs-b');if(!bInput)return;
+  const a=e.target.value&&DB.auctions.find(x=>x.id===e.target.value);
+  if(a){bInput.value=a.budget||500;bInput.readOnly=true;}
+  else{bInput.readOnly=false;}
 });
 render();
