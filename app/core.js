@@ -16,7 +16,7 @@ function migrateAuction(a){const b=a.budget||500;
   (a.slots||[]).forEach(sl=>{if(sl.esito&&sl.esito.prezzo!=null&&sl.esito.pct==null){sl.esito.pct=sl.esito.prezzo/b;delete sl.esito.prezzo;}
     if(sl.tag==null||LEGACY_TAG_MAP[sl.tag]!=null)sl.tag=LEGACY_TAG_MAP[sl.tag||'']||'top';
     if(sl.cand&&sl.cand.length>1){const keep=sl.esito&&sl.cand.find(c=>c.pid===sl.esito.pid);sl.cand=[keep||sl.cand[0]];}});
-  delete a.budget;delete a.participants;return a;}
+  a.budget=b;delete a.participants;return a;}
 function loadDB(){let r;try{r=JSON.parse(localStorage.getItem(LS));}catch(e){}
   if(r&&r.v===2&&r.auctions)return{v:2,auctions:r.auctions.map(migrateAuction),leghe:r.leghe||[]};
   if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)],leghe:[]};}
@@ -37,14 +37,20 @@ const suggPct=p=>(p.qtA||1)/500;
 const fmtPct=x=>(x*100).toFixed(1)+'%';
 const fmtCredits=x=>Math.round(x*10)/10+'';
 const pctFmt=p=>fmtPct(suggPct(p));
-const contextBudget=()=>{const lg=LG();return lg?lg.budget:(STRAT.budget_base||500);};
-const officialCredits=p=>p.qtA||1;
-const contextPct=(p,budget)=>officialCredits(p)/(budget!=null?budget:contextBudget());
-/* strategie: internamente si salva la frazione di budget, l'utente ragiona in crediti su base 500 */
-const STRAT_BUDGET=STRAT.budget_base||500;
-const pctToCredits=pct=>Math.round(pct*STRAT_BUDGET);
-const creditsToPct=cr=>cr/STRAT_BUDGET;
-const fmtCr=pct=>pctToCredits(pct)+' cr';
+/* Le strategie salvano internamente una frazione del budget (es. 0.07 = 7%),
+   non un numero di crediti fisso: così cambiare il totale di una strategia da
+   500 a 1000 (o viceversa) ricalcola da solo tutti i prezzi già inseriti,
+   mantenendo invariata la quota di budget assegnata a ciascun giocatore. */
+const contextBudget=()=>{const lg=LG();if(lg)return lg.budget;const a=A();if(a&&a.budget)return a.budget;return STRAT.budget_base||500;};
+/* Le quotazioni del listone (qtA) sono calibrate su base 500: per mostrarle
+   coerenti anche in una strategia/lega da 1000 crediti si riscalano qui. */
+const QT_BASE=STRAT.budget_base||500;
+const STRAT_BUDGET=QT_BASE;
+const officialCredits=(p,budget)=>{const b=budget!=null?budget:contextBudget();return Math.round((p.qtA||1)*(b/QT_BASE));};
+const contextPct=(p,budget)=>{const b=budget!=null?budget:contextBudget();return officialCredits(p,b)/b;};
+const pctToCredits=(pct,budget)=>Math.round(pct*(budget!=null?budget:contextBudget()));
+const creditsToPct=(cr,budget)=>cr/(budget!=null?budget:contextBudget());
+const fmtCr=(pct,budget)=>pctToCredits(pct,budget)+' cr';
 const fm=(p,s)=>p.stats&&p.stats[s]?p.stats[s].fm:null;
 const st25=(p,k)=>p.stats&&p.stats['25/26']?p.stats['25/26'][k]:null;
 function media3(p){const v=SEASONS.map(s=>fm(p,s)).filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
@@ -184,7 +190,7 @@ function auctionBadge(p){
   /* Quella lega aveva 1000 crediti: il prezzo va riportato sulla base 500
      usata ovunque nell'app, altrimenti non è confrontabile con le quotazioni. */
   const pct=costo/1000,cr=pctToCredits(pct);
-  return `<span class="tag gold" title="Pagato da ${esc(team)} nell'asta Ealloracheccazzo 25/26: ${costo} crediti su 1000, cioè il ${esc(fmtPct(pct))} del budget (${cr} cr su base ${STRAT_BUDGET})">${SIC.trophy}Prezzo Ealloracheccazzo 25/26<b>${fmtPct(pct)} · ${cr} cr</b></span>`;
+  return `<span class="tag gold" title="Pagato da ${esc(team)} nell'asta Ealloracheccazzo 25/26: ${costo} crediti su 1000, cioè il ${esc(fmtPct(pct))} del budget (${cr} cr su base ${contextBudget()})">${SIC.trophy}Prezzo Ealloracheccazzo 25/26<b>${fmtPct(pct)} · ${cr} cr</b></span>`;
 }
 function portiereBadge(p){
   const g=window.GRIGLIA_PORTIERI&&GRIGLIA_PORTIERI[p.sq];
@@ -357,7 +363,7 @@ function previewCard(p,extra,showMantra,targetPct,hideQt,cardCls,fasciaLabel){
   const budget=contextBudget();
   const qtBadge=hideQt?'':targetPct!=null
     ?`<span class="sp target" title="Quanto avevi deciso di spendere nella tua strategia">${SIC.qt||''}Il tuo prezzo<b>${pctToCredits(targetPct)} cr</b></span>`
-    :sp('qt','Quotazione',`${fmtPct(contextPct(p,budget))} · ${officialCredits(p)} cr`);
+    :sp('qt','Quotazione',`${fmtPct(contextPct(p,budget))} · ${officialCredits(p,budget)} cr`);
   /* Ai non approvati resta solo l'identità: niente numeri, niente fascia.
      Il prezzo deciso da loro nella propria strategia però resta visibile. */
   const full=canViewStats();
@@ -510,14 +516,19 @@ function openDetail(pid){R.detailId=pid;R.compareId=null;openModal(detailHtml(pi
 
 /* ================= CREATE / EDIT STRATEGY MODAL (shared) ================= */
 function openAuctionModal(mode){
-  const editing=mode==='edit';const a=editing?A():{name:'Strategia '+(DB.auctions.length+1),description:'',module:'modificatore_difesa'};
+  const editing=mode==='edit';const a=editing?A():{name:'Strategia '+(DB.auctions.length+1),description:'',module:'modificatore_difesa',budget:500};
+  const bud=a.budget||500;
   openModal(`<div class="between" style="margin-bottom:14px"><h2 style="font-size:18px">${editing?'Impostazioni':'Crea PreAsta'}</h2><button class="iconbtn" data-act="close">${IC.close}</button></div>
     <div class="field"><label for="na-n">Nome</label><input class="input" id="na-n" value="${esc(a.name)}" placeholder="Es. Lega amici…"></div>
     <div class="field"><label for="na-d">Descrizione</label><textarea class="input" id="na-d" placeholder="Scrivi qui la tua strategia…">${esc(a.description||'')}</textarea></div>
     <div class="field"><label for="na-m">Strategia / modulo</label><select class="input" id="na-m">${STRAT.template_budget.map(t=>`<option value="${t.id}" ${a.module===t.id?'selected':''}>${esc(t.nome)}</option>`).join('')}</select></div>
+    <div class="field"><label for="na-b">Crediti totali</label><select class="input" id="na-b">
+        <option value="500" ${bud===500?'selected':''}>500 (classico)</option>
+        <option value="1000" ${bud===1000?'selected':''}>1000</option></select>
+      ${editing?`<div class="faint small" style="margin-top:4px">Cambiando il totale, tutti i prezzi che hai già inserito si aggiornano da soli mantenendo la stessa quota di budget.</div>`:''}</div>
     <button class="btn primary" data-act="${editing?'save-edit':'save-new'}" style="width:100%">${editing?'Salva':"Crea e apri l'assistente"}</button>`);}
-function readForm(){const n=$('#na-n').value.trim()||'Asta',d=$('#na-d').value.trim(),m=$('#na-m').value;
-  return{name:n,description:d,module:m};}
+function readForm(){const n=$('#na-n').value.trim()||'Asta',d=$('#na-d').value.trim(),m=$('#na-m').value,b=parseInt($('#na-b').value,10)===1000?1000:500;
+  return{name:n,description:d,module:m,budget:b};}
 
 /* ================= ADD-TO-OBJECTIVES MODAL (shared: listino "+" and player detail) ================= */
 function objectiveModalHtml(pid){
@@ -528,7 +539,7 @@ function objectiveModalHtml(pid){
     <div class="field"><label for="oa-tag">In che fascia lo metti?</label>
       <select class="input" id="oa-tag">${SLOT_TAGS.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></div>
     <div class="field"><label for="oa-cr">Quanto vuoi spendere (circa)</label>
-      <div class="row"><input class="input num" type="number" min="0" step="1" id="oa-cr" value="${officialCredits(p)}"><span class="faint small">crediti su ${STRAT_BUDGET}</span></div></div>
+      <div class="row"><input class="input num" type="number" min="0" step="1" id="oa-cr" value="${officialCredits(p)}"><span class="faint small">crediti su ${contextBudget()}</span></div></div>
     <button class="btn primary" data-act="save-objective" data-pid="${p.id}" style="width:100%">${IC.plus} Aggiungi agli obiettivi</button>`;
 }
 function openObjectiveModal(pid){openModal(objectiveModalHtml(pid));}

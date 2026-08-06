@@ -11,8 +11,8 @@ function renderAsteView(){
           <button class="iconbtn" data-del="${a.id}">${IC.trash}</button></div></div>
       <div class="row" style="gap:16px;margin-top:12px">
         <div><div class="num" style="font-weight:750;font-size:18px">${bs.got}<span class="faint" style="font-size:13px">/25</span></div><div class="faint small">rosa</div></div>
-        <div><div class="num" style="font-weight:750;font-size:18px">${fmtCr(bs.speso)}</div><div class="faint small">speso</div></div>
-        <div><div class="num" style="font-weight:750;font-size:18px;color:${bs.residuo<0?'var(--neg)':'var(--text)'}">${fmtCr(bs.residuo)}</div><div class="faint small">residuo</div></div>
+        <div><div class="num" style="font-weight:750;font-size:18px">${fmtCr(bs.speso,a.budget)}</div><div class="faint small">speso</div></div>
+        <div><div class="num" style="font-weight:750;font-size:18px;color:${bs.residuo<0?'var(--neg)':'var(--text)'}">${fmtCr(bs.residuo,a.budget)}</div><div class="faint small">residuo</div></div>
         <div class="push" style="flex:1"></div><span class="tag blue">${a.slots.length} obiettivi</span></div>
       <div class="bar" style="margin-top:12px"><i style="width:${Math.round(bs.got/25*100)}%"></i></div></div>`;}).join('');
   $('#view').innerHTML=`<div style="max-width:760px;margin:0 auto"><div class="between" style="margin-bottom:18px">
