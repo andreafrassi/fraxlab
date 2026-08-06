@@ -42,7 +42,7 @@ function fasciaBadgeHtml(lg,p){
   const strat=linkedStrategy(lg),tagVal=fasciaOfPlayer(strat,p.id);
   if(!tagVal)return'';
   const entry=SLOT_TAGS.find(([v])=>v===tagVal);if(!entry)return'';
-  return `<span class="ot-tag ${TAG_COLOR[tagVal]}" title="Tua fascia in «${esc(strat.name)}»">${esc(entry[1])}</span>`;
+  return `<span class="ot-tag lg ${TAG_COLOR[tagVal]}" title="Tua fascia in «${esc(strat.name)}»">${esc(entry[1])}</span>`;
 }
 function legaAssignExtra(lg,p){
   const fascia=fasciaBadgeHtml(lg,p);
@@ -67,8 +67,16 @@ function viewGiocatori(lg){
     return true;});
   sortArr(arr,f.sort);
   if(strat){
-    const fasciaRank=pid=>{const i=SLOT_TAGS.findIndex(([v])=>v===fasciaOfPlayer(strat,pid));return i<0?SLOT_TAGS.length:i;};
-    arr.sort((a,b)=>fasciaRank(a.id)-fasciaRank(b.id));
+    /* Stesso ordine della strategia: prima per fascia, poi nella posizione in cui
+       li hai disposti tu (l'array slots è quello che il drag&drop riordina).
+       Chi non è in strategia resta nell'ordinamento scelto sopra (sort stabile). */
+    const rank=pid=>{
+      const sl=slotOfPlayer(strat,pid);
+      if(!sl)return[SLOT_TAGS.length,0];
+      const f=SLOT_TAGS.findIndex(([v])=>v===sl.tag);
+      return[f<0?SLOT_TAGS.length:f,strat.slots.indexOf(sl)];
+    };
+    arr.sort((a,b)=>{const ra=rank(a.id),rb=rank(b.id);return ra[0]-rb[0]||ra[1]-rb[1];});
   }
   return `<div class="sec-title">Giocatori</div>
   <div class="filters">
@@ -82,7 +90,10 @@ function viewGiocatori(lg){
     <button class="iconbtn" data-act="toggle-hide-data" title="${lg.hideData?'Mostra dati giocatori':'Nascondi dati giocatori'}">${lg.hideData?IC.eyeOff:IC.eye}</button>
   </div>
   <div class="muted small" style="margin:-4px 0 8px">${arr.length} giocatori</div>
-  <div class="plist${lg.hideData?' hide-data':''}">${arr.map(p=>previewCard(p,legaAssignExtra(lg,p),true,targetOfPlayer(strat,p.id))).join('')}</div>`;
+  <div class="plist${lg.hideData?' hide-data':''}">${arr.map(p=>{
+    const tag=fasciaOfPlayer(strat,p.id);
+    return previewCard(p,legaAssignExtra(lg,p),true,targetOfPlayer(strat,p.id),false,tag?'fascia '+TAG_COLOR[tag]:'');
+  }).join('')}</div>`;
 }
 function viewLega(lg){
   const strat=linkedStrategy(lg);

@@ -281,6 +281,14 @@ textarea.input{min-height:70px;resize:vertical;line-height:1.5}
 .ot-tag.cyan{color:var(--accent-cyan);background:rgba(56,189,248,.16)}
 .ot-tag.pink{color:#f472b6;background:rgba(244,114,182,.16)}
 .ot-tag.bought{color:var(--pos);background:rgba(34,227,154,.16)}
+/* fascia nella lista dell'asta live: deve saltare all'occhio mentre scorri */
+.ot-tag.lg{font-size:11px;letter-spacing:.04em;padding:5px 11px;border:1px solid currentColor}
+.pcard.fascia{border-left-width:4px;border-left-style:solid}
+.pcard.fascia.violet{border-left-color:#8b5cf6}
+.pcard.fascia.blue{border-left-color:var(--accent)}
+.pcard.fascia.amber{border-left-color:var(--warn)}
+.pcard.fascia.cyan{border-left-color:var(--accent-cyan)}
+.pcard.fascia.pink{border-left-color:#f472b6}
 .ot-prices{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:16px;flex:none}
 .ot-price{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left}
 .ot-price.mine{padding-left:16px;border-left:1px solid var(--border2)}

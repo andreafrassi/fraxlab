@@ -346,7 +346,7 @@ const PHOTOS=new Set(window.PLAYER_PHOTOS||[]);
 const playerAvatar=p=>PHOTOS.has(p.id)
   ?`<span class="pavatar"><img src="img/players/${p.id}.webp" alt="" loading="lazy"></span>`
   :`<span class="chip ${p.r}">${p.r}</span>`;
-function previewCard(p,extra,showMantra,targetPct,hideQt){
+function previewCard(p,extra,showMantra,targetPct,hideQt,cardCls){
   const mv=st25(p,'mv'),f=fm(p,'25/26'),pv=st25(p,'pv'),isP=p.r==='P';
   const inA=!!A(),inSlot=inA&&slotOf(p.id);
   const sp=(ic,l,v)=>(v==null||v==='')?'':`<span class="sp" title="${l}">${SIC[ic]||''}${l}<b>${v}</b></span>`;
@@ -366,7 +366,7 @@ function previewCard(p,extra,showMantra,targetPct,hideQt){
       c1,c2,sp('pr','Presenze',pv),titBar(p),sp('fvm','FVM',p.fvm!=null?fmtPct(p.fvm/1000):null),sband,pband].join('')
     :(targetPct!=null?qtBadge:'');
   const tier=full&&p.tiers['25/26']?tierBadge(p.tiers['25/26']):'';
-  return `<div class="pcard" data-open="${p.id}">${showMantra?playerAvatar(p):`<span class="chip ${p.r}">${p.r}</span>`}
+  return `<div class="pcard${cardCls?' '+cardCls:''}" data-open="${p.id}">${showMantra?playerAvatar(p):`<span class="chip ${p.r}">${p.r}</span>`}
     <div class="pmid"><div class="pname">${esc(p.nome)}
       ${p.flags.includes('rigorista')?'<span class="tag gold" style="padding:1px 6px">rig</span>':''}</div>
       <div class="pmeta">${esc(p.sq)}${!showMantra&&tier?' · '+tier:''}</div>
