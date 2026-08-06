@@ -283,12 +283,18 @@ textarea.input{min-height:70px;resize:vertical;line-height:1.5}
 .ot-tag.bought{color:var(--pos);background:rgba(34,227,154,.16)}
 /* fascia nella lista dell'asta live: deve saltare all'occhio mentre scorri */
 .ot-tag.lg{font-size:11px;letter-spacing:.04em;padding:5px 11px;border:1px solid currentColor}
-.pcard.fascia{border-left-width:4px;border-left-style:solid}
-.pcard.fascia.violet{border-left-color:#8b5cf6}
-.pcard.fascia.blue{border-left-color:var(--accent)}
-.pcard.fascia.amber{border-left-color:var(--warn)}
-.pcard.fascia.cyan{border-left-color:var(--accent-cyan)}
-.pcard.fascia.pink{border-left-color:#f472b6}
+/* banda della fascia: elemento sovrapposto, così può avere il bagliore
+   (un border-left non può brillare) */
+.pcard.fascia{position:relative}
+.pcard.fascia::before{content:'';position:absolute;left:-1px;top:-1px;bottom:-1px;width:8px;
+  border-radius:14px 0 0 14px;background:var(--fascia);
+  box-shadow:0 0 16px 2px var(--fascia-glow),inset 0 0 0 1px rgba(255,255,255,.18);
+  pointer-events:none}
+.pcard.fascia.violet{--fascia:#8b5cf6;--fascia-glow:rgba(139,92,246,.55)}
+.pcard.fascia.blue{--fascia:#4f8ef7;--fascia-glow:rgba(79,142,247,.55)}
+.pcard.fascia.amber{--fascia:#f5b544;--fascia-glow:rgba(245,181,68,.5)}
+.pcard.fascia.cyan{--fascia:#38bdf8;--fascia-glow:rgba(56,189,248,.5)}
+.pcard.fascia.pink{--fascia:#f472b6;--fascia-glow:rgba(244,114,182,.5)}
 .ot-prices{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:16px;flex:none}
 .ot-price{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left}
 .ot-price.mine{padding-left:16px;border-left:1px solid var(--border2)}
