@@ -3,6 +3,8 @@ if(!LG()){location.href='leghe.html';}
 R.lf={q:'',r:'',sq:'',rm:'',sort:'qt',stato:'',fascia:''};
 R.legaTab='giocatori';
 const TEAM_PALETTE=['#8b5cf6','#4f8ef7','#f5b544','#38bdf8','#f472b6','#22e39a','#fb7185','#facc15','#a78bfa','#2dd4bf'];
+/* etichetta breve per la banda verticale: "FASCIA" è già implicito nel contesto */
+const FASCIA_SHORT={top:'TOP',semitop:'SEMI-TOP',terza:'TERZA',quarta:'QUARTA',scommesse:'SCOMMESSE'};
 const teamColor=(lg,teamId)=>{const i=lg.teams.findIndex(t=>t.id===teamId);return i<0?'#8b93a0':TEAM_PALETTE[i%TEAM_PALETTE.length];};
 const linkedStrategy=lg=>lg.linkedStrategyId&&DB.auctions.find(a=>a.id===lg.linkedStrategyId)||null;
 const slotOfPlayer=(strat,pid)=>strat?strat.slots.find(s=>s.cand.some(c=>c.pid===pid))||null:null;
@@ -38,19 +40,12 @@ function teamCard(lg,t){
     <div class="tc-roster">${groups||'<div class="faint small" style="padding:6px 0">Nessun giocatore</div>'}</div>
   </div>`;
 }
-function fasciaBadgeHtml(lg,p){
-  const strat=linkedStrategy(lg),tagVal=fasciaOfPlayer(strat,p.id);
-  if(!tagVal)return'';
-  const entry=SLOT_TAGS.find(([v])=>v===tagVal);if(!entry)return'';
-  return `<span class="ot-tag lg ${TAG_COLOR[tagVal]}" title="Tua fascia in «${esc(strat.name)}»">${esc(entry[1])}</span>`;
-}
 function legaAssignExtra(lg,p){
-  const fascia=fasciaBadgeHtml(lg,p);
   const as=lg.assign[p.id],team=as&&lg.teams.find(t=>t.id===as.teamId);
   if(team){const col=teamColor(lg,team.id);
-    return fascia+`<span class="tag" style="border-color:${col}66;color:${col};background:${col}1a;cursor:pointer" data-editassign="${p.id}" title="Modifica assegnazione">${esc(team.name)}<b>${fmtCredits(as.price)} cr</b></span>
+    return `<span class="tag" style="border-color:${col}66;color:${col};background:${col}1a;cursor:pointer" data-editassign="${p.id}" title="Modifica assegnazione">${esc(team.name)}<b>${fmtCredits(as.price)} cr</b></span>
        <button class="iconbtn" data-unassign="${p.id}" title="Rimuovi assegnazione">${IC.close}</button>`;}
-  return fascia+`<button class="iconbtn" data-assign="${p.id}" title="Assegna a una squadra">${IC.plus}</button>`;
+  return `<button class="iconbtn" data-assign="${p.id}" title="Assegna a una squadra">${IC.plus}</button>`;
 }
 function viewGiocatori(lg){
   const f=R.lf,q=f.q.trim().toLowerCase(),strat=linkedStrategy(lg);
@@ -92,7 +87,8 @@ function viewGiocatori(lg){
   <div class="muted small" style="margin:-4px 0 8px">${arr.length} giocatori</div>
   <div class="plist${lg.hideData?' hide-data':''}">${arr.map(p=>{
     const tag=fasciaOfPlayer(strat,p.id);
-    return previewCard(p,legaAssignExtra(lg,p),true,targetOfPlayer(strat,p.id),false,tag?'fascia '+TAG_COLOR[tag]:'');
+    /* "FASCIA" è ridondante dentro la banda colorata: dentro ci sta solo il nome breve. */
+    return previewCard(p,legaAssignExtra(lg,p),true,targetOfPlayer(strat,p.id),false,tag?'fascia '+TAG_COLOR[tag]:'',tag?FASCIA_SHORT[tag]:null);
   }).join('')}</div>`;
 }
 function viewLega(lg){
