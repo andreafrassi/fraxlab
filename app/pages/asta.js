@@ -14,7 +14,8 @@ function viewAssistente(){
   let arr=PLAYERS.filter(p=>p.r===ph&&(!f.sq||p.sq===f.sq)&&(!f.rm||matchMantra(p,f.rm))&&(!q||p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q)));
   sortArr(arr,f.sort);
   const idx=ROLES.indexOf(ph);
-  return `<div class="between" style="margin-bottom:6px"><h1 style="font-size:19px">Assistente · ${esc(a.name)}</h1></div>
+  return `<div class="between" style="margin-bottom:6px"><h1 style="font-size:19px">Assistente · ${esc(a.name)}</h1>
+    <button class="btn sm" data-act="edit-auction">${IC.edit} Impostazioni</button></div>
   <div class="stepper" style="margin-bottom:18px">${stepper}</div>
 
   <div class="asst-grid">
