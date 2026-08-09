@@ -358,6 +358,9 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
 .team-col{flex:0 0 240px;background:linear-gradient(180deg,rgba(255,255,255,.026),rgba(255,255,255,0)),var(--surface);
   border:1px solid var(--border);border-radius:var(--r16);padding:14px}
 .tcdot{width:8px;height:8px;border-radius:50%;flex:none}
+.tc-warn{display:flex;align-items:center;gap:7px;padding:7px 10px;margin-bottom:10px;border-radius:9px;
+  background:rgba(245,181,68,.12);border:1px solid rgba(245,181,68,.35);color:var(--warn);font-size:11.5px;font-weight:600;line-height:1.3}
+.tc-warn svg{width:15px;height:15px;flex:none;stroke:var(--warn);fill:none;stroke-width:2}
 .tc-roster{display:flex;flex-direction:column;gap:10px;max-height:320px;overflow-y:auto}
 .tc-group-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);padding:0 0 4px}
 .tc-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)}

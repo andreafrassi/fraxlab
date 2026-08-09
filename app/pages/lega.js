@@ -11,6 +11,18 @@ const slotOfPlayer=(strat,pid)=>strat?strat.slots.find(s=>s.cand.some(c=>c.pid==
 const fasciaOfPlayer=(strat,pid)=>{const sl=slotOfPlayer(strat,pid);return sl?sl.tag:null;};
 const targetOfPlayer=(strat,pid)=>{const sl=slotOfPlayer(strat,pid);if(!sl)return null;const c=sl.cand.find(c=>c.pid===pid);return c?c.pct:null;};
 
+/* Avviso se una squadra ha preso 3 o più giocatori della stessa squadra reale
+   (rischio concentrazione: un turno storto di quella squadra pesa su più ruoli
+   in un colpo solo). Solo qui nell'asta live, dove i giocatori sono davvero
+   assegnati a una rosa — non ha senso nel listone o nell'assistente PreAsta. */
+function clubOverlapWarningHtml(roster){
+  const counts={};
+  roster.forEach(({p})=>{counts[p.sq]=(counts[p.sq]||0)+1;});
+  const over=Object.entries(counts).filter(([,n])=>n>=3).sort((a,b)=>b[1]-a[1]);
+  if(!over.length)return'';
+  const txt=over.map(([sq,n])=>`${esc(sq)} (${n})`).join(', ');
+  return `<div class="tc-warn" title="Un turno storto di quella squadra pesa su più giocatori in una volta">${IC.warn}${over.length>1?'Tanti giocatori dalle stesse squadre: ':'Tanti giocatori dalla stessa squadra: '}${txt}</div>`;
+}
 function teamCard(lg,t){
   const st=teamStats(lg,t.id),pct=lg.budget?Math.min(100,Math.round(st.speso/lg.budget*100)):0,over=st.residuo<0,col=teamColor(lg,t.id);
   const roster=Object.entries(lg.assign).filter(([pid,a])=>a.teamId===t.id).map(([pid,a])=>({p:byId[+pid],price:a.price})).filter(x=>x.p);
@@ -37,6 +49,7 @@ function teamCard(lg,t){
     <div class="faint small" style="margin-bottom:8px">crediti rimasti su ${fmtCredits(lg.budget)}</div>
     <div class="bar ${over?'over':''}" style="margin-bottom:10px"><i style="width:${pct}%"></i></div>
     <div class="muted small" style="margin-bottom:6px">${st.count} giocator${st.count===1?'e':'i'}</div>
+    ${clubOverlapWarningHtml(roster)}
     <div class="tc-roster">${groups||'<div class="faint small" style="padding:6px 0">Nessun giocatore</div>'}</div>
   </div>`;
 }
