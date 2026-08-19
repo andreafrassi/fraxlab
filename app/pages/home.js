@@ -27,8 +27,6 @@ function renderHomeView(){
       ${tileLink('aste.html','blue',IC.target,'Le tue strategie','Riprendi e confronta le tue bozze salvate.')}
       ${tileLink('listone.html','green',IC.list,'Il listone',nplayers+' giocatori, statistiche e valori consigliati.')}
       ${tileLink('leghe.html','pink',IC.gavel,'Asta','Squadre, crediti e assegnazione giocatori in tempo reale.')}
-      ${tileLink('guida.html','amber',IC.book,"Guida all'asta",'Come dividere il budget e comporre i 25.')}
-      ${tileLink('consigli.html','cyan',IC.bulb,'Consigli','Dritte per ruolo e i 10 errori da evitare.')}
     </div>
     ${recentHtml}
   </div>`;

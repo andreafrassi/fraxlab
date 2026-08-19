@@ -285,9 +285,7 @@ function confirmSentHtml(email){
 /* ================= SHARED CHROME ================= */
 const NAVPAGES=[
   {key:'aste',href:'aste.html',label:'Le tue strategie'},
-  {key:'listone',href:'listone.html',label:'Il listone'},
-  {key:'guida',href:'guida.html',label:"Guida all'asta"},
-  {key:'consigli',href:'consigli.html',label:'Consigli'}
+  {key:'listone',href:'listone.html',label:'Il listone'}
 ];
 function initials(email){
   const n=(email||'').split('@')[0].replace(/[._-]+/g,' ').trim().split(/\s+/);
