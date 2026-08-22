@@ -22,7 +22,67 @@ function loadDB(){let r;try{r=JSON.parse(localStorage.getItem(LS));}catch(e){}
   if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)],leghe:[]};}
   return{v:2,auctions:[],leghe:[]};}
 let DB=loadDB();
-function save(){localStorage.setItem(LS,JSON.stringify(DB));}
+function save(){localStorage.setItem(LS,JSON.stringify(DB));scheduleCloudPush();}
+
+/* ---- sync cloud (Supabase), best-effort: il sito resta usabile senza ----
+   getSyncedAt/setSyncedAt tengono traccia di QUANDO locale e cloud erano
+   allineati l'ultima volta, per decidere se al login conviene scaricare i
+   dati del cloud (li ho modificati da un altro dispositivo) o caricare i
+   miei (il cloud non ha nulla di più recente). */
+const SYNC_KEY='fantaasta_v1_syncedAt';
+const getSyncedAt=()=>Number(localStorage.getItem(SYNC_KEY)||0);
+const setSyncedAt=t=>localStorage.setItem(SYNC_KEY,String(t));
+let _cloudSynced=false,_pushTimer=null;
+function resetCloudSync(){_cloudSynced=false;}
+function scheduleCloudPush(){
+  if(!(window.AUTH&&AUTH.configured&&AUTH.user))return;
+  clearTimeout(_pushTimer);
+  _pushTimer=setTimeout(async()=>{const ok=await cloudPush(DB);if(ok)setSyncedAt(Date.now());},900);
+}
+const isEmptyDB=d=>!(d&&(((d.auctions||[]).length)||((d.leghe||[]).length)));
+function mergeDBs(local,cloud){
+  /* Solo per il primissimo sync di un dispositivo: se sia locale che cloud
+     hanno già dati reali e non si erano mai parlati prima, uniamo per id
+     invece di sceglierne uno a caso e perdere l'altro. A parità di id vince
+     la versione locale (quella che l'utente sta guardando in questo momento). */
+  const byId=arr=>{const m={};(arr||[]).forEach(x=>{if(x&&x.id)m[x.id]=x;});return m;};
+  const auctions=Object.assign({},byId(cloud.auctions),byId(local.auctions));
+  const leghe=Object.assign({},byId(cloud.leghe),byId(local.leghe));
+  return{v:2,auctions:Object.values(auctions),leghe:Object.values(leghe)};
+}
+async function syncOnLogin(){
+  if(_cloudSynced)return;if(!(window.AUTH&&AUTH.configured&&AUTH.user))return;
+  _cloudSynced=true;
+  const firstSync=getSyncedAt()===0;
+  const row=await cloudPull();
+  if(firstSync){
+    if(!row||!row.data||isEmptyDB(row.data)){
+      if(!isEmptyDB(DB)){const ok=await cloudPush(DB);if(ok)setSyncedAt(Date.now());}
+      else if(row)setSyncedAt(new Date(row.updated_at).getTime());
+      return;
+    }
+    if(isEmptyDB(DB)){
+      DB=row.data;localStorage.setItem(LS,JSON.stringify(DB));setSyncedAt(new Date(row.updated_at).getTime());
+      if(typeof render==='function')render();
+      return;
+    }
+    DB=mergeDBs(DB,row.data);
+    localStorage.setItem(LS,JSON.stringify(DB));
+    const ok=await cloudPush(DB);
+    setSyncedAt(ok?Date.now():new Date(row.updated_at).getTime());
+    if(typeof render==='function')render();
+    return;
+  }
+  if(row&&row.data){
+    const cloudTs=new Date(row.updated_at).getTime();
+    if(cloudTs>getSyncedAt()){
+      DB=row.data;localStorage.setItem(LS,JSON.stringify(DB));setSyncedAt(cloudTs);
+      if(typeof render==='function')render();
+      return;
+    }
+  }
+  const ok=await cloudPush(DB);if(ok)setSyncedAt(Date.now());
+}
 
 let _uid=Date.now();const uid=p=>p+(++_uid);
 

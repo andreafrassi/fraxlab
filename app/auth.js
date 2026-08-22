@@ -18,7 +18,10 @@ if(!sb)AUTH.configured=false;
 
 /* Ogni pagina definisce la propria render() globale: la richiamiamo quando lo
    stato di login cambia, stesso pattern già usato dal click-delegate di core.js. */
-function authRerender(){if(typeof render==='function')render();}
+function authRerender(){
+  if(typeof syncOnLogin==='function'&&AUTH.user)syncOnLogin();
+  if(typeof render==='function')render();
+}
 
 async function loadProfile(){
   if(!sb||!AUTH.user){AUTH.profile=null;return;}
@@ -52,7 +55,25 @@ async function authSignOut(){
   if(!sb)return;
   await sb.auth.signOut();
   AUTH.user=null;AUTH.profile=null;
+  if(typeof resetCloudSync==='function')resetCloudSync();
   authRerender();
+}
+
+/* ================= SYNC DATI (strategie/leghe) =================
+   Il resto dell'app salva tutto in localStorage (vedi core.js: DB/save()).
+   Queste due funzioni sono l'unico punto in cui quel JSON tocca Supabase:
+   una riga per utente nella tabella user_data, sovrascritta per intero
+   a ogni salvataggio. core.js decide quando chiamarle (dopo save() e al login). */
+async function cloudPull(){
+  if(!sb||!AUTH.user)return null;
+  const{data,error}=await sb.from('user_data').select('data,updated_at').eq('id',AUTH.user.id).single();
+  if(error||!data)return null;
+  return data;
+}
+async function cloudPush(payload){
+  if(!sb||!AUTH.user)return false;
+  const{error}=await sb.from('user_data').upsert({id:AUTH.user.id,data:payload,updated_at:new Date().toISOString()});
+  return!error;
 }
 
 /* Primo controllo al caricamento + reazione a login/logout fatti altrove

@@ -69,3 +69,29 @@ create policy "admin modifica i profili"
 insert into public.profiles (id, email)
 select id, email from auth.users
 on conflict (id) do nothing;
+
+-- 6. Sincronizzazione dati tra dispositivi (strategie, leghe, aste).
+-- Una riga per utente: tutto il contenuto di DB (localStorage) salvato come JSON.
+create table if not exists public.user_data (
+  id uuid primary key references auth.users on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_data enable row level security;
+
+drop policy if exists "utente legge i propri dati" on public.user_data;
+create policy "utente legge i propri dati"
+  on public.user_data for select
+  using (id = auth.uid());
+
+drop policy if exists "utente scrive i propri dati" on public.user_data;
+create policy "utente scrive i propri dati"
+  on public.user_data for insert
+  with check (id = auth.uid());
+
+drop policy if exists "utente aggiorna i propri dati" on public.user_data;
+create policy "utente aggiorna i propri dati"
+  on public.user_data for update
+  using (id = auth.uid())
+  with check (id = auth.uid());
