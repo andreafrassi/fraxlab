@@ -176,13 +176,14 @@ const SIC={
   qt:'<svg viewBox="0 0 16 16"><path d="M2 8.3V3a1 1 0 0 1 1-1h5.3a1 1 0 0 1 .7.3L13.7 7a1 1 0 0 1 0 1.4L8.9 13.2a1 1 0 0 1-1.4 0L2.3 8.9A1 1 0 0 1 2 8.3z"/><circle cx="5.2" cy="5.2" r="1"/></svg>'
 };
 const GIORNATE=38,TBAR_SEGS=5;
-function titIdx(p){const pv=st25(p,'pv');return pv==null?null:Math.round(pv/GIORNATE*100);}
+function titIdx(p){return p.titProb==null?null:p.titProb;}
 function titBar(p){
   const t=titIdx(p);if(t==null)return'';
   const filled=Math.max(0,Math.min(TBAR_SEGS,Math.round(t/100*TBAR_SEGS)));
   const tier=t>=65?'green':t>=30?'amber':'red';
   const bars=Array.from({length:TBAR_SEGS},(_,i)=>`<i class="seg${i<filled?' on':''}"></i>`).join('');
-  return `<span class="tbar ${tier}" title="Titolarità: ${t}% delle partite 25/26"><span class="bars">${bars}</span><b>${t}%</b></span>`;
+  const fonte=p.titFonte?esc(p.titFonte):'';
+  return `<span class="tbar ${tier}" title="Titolarità 2026/27: ${t}%${fonte?' — '+fonte:''}"><span class="bars">${bars}</span><b>${t}%</b></span>`;
 }
 function auctionBadge(p){
   const prev=EALLORACHECCAZZO_PREV&&EALLORACHECCAZZO_PREV[p.id];
