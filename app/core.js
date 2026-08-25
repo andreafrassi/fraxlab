@@ -245,6 +245,15 @@ function titBar(p){
   const fonte=p.titFonte?esc(p.titFonte):'';
   return `<span class="tbar ${tier}" title="Titolarità 2026/27: ${t}%${fonte?' — '+fonte:''}"><span class="bars">${bars}</span><b>${t}%</b></span>`;
 }
+/* "Performance": FVM del giocatore relativo al massimo FVM del suo ruolo,
+   0-100. Calcolato pigramente e tenuto in cache perché serve solo nella
+   dashboard admin dell'asta live, non nel rendering di ogni card giocatore. */
+let _roleMaxFvm=null;
+function perfIdx(p){
+  if(!_roleMaxFvm){_roleMaxFvm={};ROLES.forEach(r=>{_roleMaxFvm[r]=Math.max(1,...PLAYERS.filter(x=>x.r===r).map(x=>x.fvm||0));});}
+  if(p.fvm==null)return null;
+  return Math.max(0,Math.min(100,Math.round(p.fvm/_roleMaxFvm[p.r]*100)));
+}
 function auctionBadge(p){
   const prev=EALLORACHECCAZZO_PREV&&EALLORACHECCAZZO_PREV[p.id];
   if(!prev)return'';

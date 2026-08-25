@@ -104,6 +104,66 @@ function viewGiocatori(lg){
     return previewCard(p,legaAssignExtra(lg,p),true,targetOfPlayer(strat,p.id),false,tag?'fascia '+TAG_COLOR[tag]:'',tag?FASCIA_SHORT[tag]:null);
   }).join('')}</div>`;
 }
+/* ================= DASHBOARD ADMIN (solo io) =================
+   Durante l'asta live, per una squadra alla volta: quanto sono titolari,
+   quanto possono rendere e quanto stiamo spendendo per reparto rispetto
+   a una ripartizione di budget "equilibrata" di riferimento. Solo isAdmin()
+   la vede: è un'analisi per chi gestisce l'asta, non per i partecipanti. */
+const ROLE_SHORT2={P:'Porta',D:'Difesa',C:'Centrocampo',A:'Attacco'};
+function budgetTemplateRef(){return STRAT.template_budget.find(t=>t.id==='equilibrato')||STRAT.template_budget[0];}
+function teamAnalysis(lg,teamId){
+  const roster=Object.entries(lg.assign).filter(([pid,a])=>a.teamId===teamId).map(([pid,a])=>({p:byId[+pid],price:a.price})).filter(x=>x.p);
+  const tpl=budgetTemplateRef();
+  const avg=vals=>{vals=vals.filter(v=>v!=null);return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;};
+  const mk=list=>({tit:avg(list.map(x=>titIdx(x.p))),perf:avg(list.map(x=>perfIdx(x.p))),speso:list.reduce((s,x)=>s+x.price,0),n:list.length});
+  const perRole={};
+  ROLES.forEach(r=>{
+    const list=roster.filter(x=>x.p.r===r),m=mk(list);
+    const target=lg.budget*(tpl.ripartizione_pct[r]||0);
+    m.budgetPct=list.length&&target>0?Math.round(m.speso/target*100):null;
+    perRole[r]=m;
+  });
+  const overall=mk(roster);
+  overall.budgetPct=lg.budget?Math.round(overall.speso/lg.budget*100):0;
+  return{overall,perRole};
+}
+function gaugeSvg(ringVal,display,color){
+  const r=38,c=2*Math.PI*r;
+  if(ringVal==null)return`<div class="gauge"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" class="gauge-track"/></svg>
+    <div class="gauge-val faint">–</div></div>`;
+  const frac=Math.max(0,Math.min(100,ringVal))/100;
+  return`<div class="gauge"><svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="${r}" class="gauge-track"/>
+      <circle cx="50" cy="50" r="${r}" class="gauge-fill" style="stroke:${color};stroke-dasharray:${c.toFixed(1)};stroke-dashoffset:${(c*(1-frac)).toFixed(1)}"/>
+    </svg>
+    <div class="gauge-val">${display}</div></div>`;
+}
+const tierGoodHigh=v=>v==null?'var(--muted)':v>=70?'var(--pos)':v>=40?'var(--warn)':'var(--neg)';
+const tierBudget=v=>v==null?'var(--muted)':v>=90?'var(--neg)':v>=50?'var(--warn)':'var(--pos)';
+function gaugeCard(title,m){
+  const tit=m?m.tit:null,perf=m?m.perf:null,bp=m&&m.n?m.budgetPct:null;
+  return`<div class="gauge-card">
+    <div class="gauge-card-title">${esc(title)}</div>
+    <div class="gauge-row">
+      <div class="gauge-col">${gaugeSvg(tit,tit==null?'–':tit+'<span>/100</span>',tierGoodHigh(tit))}<div class="gauge-lbl">Titolarità</div></div>
+      <div class="gauge-col">${gaugeSvg(perf,perf==null?'–':perf+'<span>/100</span>',tierGoodHigh(perf))}<div class="gauge-lbl">Performance</div></div>
+      <div class="gauge-col">${gaugeSvg(bp==null?null:Math.min(100,bp),bp==null?'–':bp+'<span>%</span>',tierBudget(bp))}<div class="gauge-lbl">Budget</div></div>
+    </div></div>`;
+}
+function analisiHtml(lg){
+  if(!isAdmin())return'';
+  if(!R.analisiTeamId||!lg.teams.some(t=>t.id===R.analisiTeamId))R.analisiTeamId=lg.teams[0]?lg.teams[0].id:null;
+  const teamOpts=lg.teams.map(t=>`<option value="${t.id}" ${t.id===R.analisiTeamId?'selected':''}>${esc(t.name)}</option>`).join('');
+  if(!R.analisiTeamId)return`<div class="empty">${IC.target}<div>Aggiungi almeno una squadra per vedere l'analisi</div></div>`;
+  const an=teamAnalysis(lg,R.analisiTeamId);
+  return`<div class="between" style="margin-bottom:14px;gap:10px;flex-wrap:wrap">
+      <div class="muted small">Solo tu la vedi: quanto sono titolari, quanto possono rendere e quanto stiamo spendendo per reparto.</div>
+      <select class="input" id="lga-team" style="max-width:220px">${teamOpts}</select></div>
+    <div class="gauge-grid">
+      ${gaugeCard('Rosa completa',an.overall)}
+      ${ROLES.map(r=>gaugeCard(ROLE_SHORT2[r],an.perRole[r])).join('')}
+    </div>`;
+}
 function viewLega(lg){
   const strat=linkedStrategy(lg);
   return `<div class="between" style="margin-bottom:14px;flex-wrap:wrap;gap:10px"><div><h1 style="font-size:20px">${esc(lg.name)}</h1>
@@ -115,8 +175,9 @@ function viewLega(lg){
   <div class="tabbar" style="margin:18px 0 14px">
     <button class="tabbtn ${R.legaTab==='giocatori'?'active':''}" data-legatab="giocatori">Giocatori</button>
     <button class="tabbtn ${R.legaTab==='formazioni'?'active':''}" data-legatab="formazioni">Formazioni squadre</button>
+    ${isAdmin()?`<button class="tabbtn ${R.legaTab==='analisi'?'active':''}" data-legatab="analisi">${IC.shield} Analisi</button>`:''}
   </div>
-  ${R.legaTab==='formazioni'?viewFormazioni():viewGiocatori(lg)}`;
+  ${R.legaTab==='formazioni'?viewFormazioni():R.legaTab==='analisi'&&isAdmin()?analisiHtml(lg):viewGiocatori(lg)}`;
 }
 function legaSettingsHtml(lg){
   const stratOpts=DB.auctions.map(a=>`<option value="${a.id}" ${lg.linkedStrategyId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
@@ -187,6 +248,7 @@ document.addEventListener('click',e=>{
    squadra seguono subito quella strategia (o tornano modificabili a mano
    se si sceglie "Nessuna"), senza dover chiudere e riaprire il modale. */
 document.addEventListener('change',e=>{
+  if(e.target.id==='lga-team'){R.analisiTeamId=e.target.value;render();return;}
   if(e.target.id!=='lgs-strat')return;
   const bInput=$('#lgs-b');if(!bInput)return;
   const a=e.target.value&&DB.auctions.find(x=>x.id===e.target.value);
