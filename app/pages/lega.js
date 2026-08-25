@@ -154,15 +154,16 @@ function analisiHtml(lg){
   if(!isAdmin())return'';
   if(!R.analisiTeamId||!lg.teams.some(t=>t.id===R.analisiTeamId))R.analisiTeamId=lg.teams[0]?lg.teams[0].id:null;
   const teamOpts=lg.teams.map(t=>`<option value="${t.id}" ${t.id===R.analisiTeamId?'selected':''}>${esc(t.name)}</option>`).join('');
-  if(!R.analisiTeamId)return`<div class="empty">${IC.target}<div>Aggiungi almeno una squadra per vedere l'analisi</div></div>`;
+  if(!R.analisiTeamId)return'';
   const an=teamAnalysis(lg,R.analisiTeamId);
-  return`<div class="between" style="margin-bottom:14px;gap:10px;flex-wrap:wrap">
-      <div class="muted small">Solo tu la vedi: quanto sono titolari, quanto possono rendere e quanto stiamo spendendo per reparto.</div>
+  return`<div style="margin:0 0 22px">
+    <div class="between" style="margin-bottom:14px;gap:10px;flex-wrap:wrap">
+      <div class="muted small">${IC.shield} Solo tu la vedi: quanto sono titolari, quanto possono rendere e quanto stiamo spendendo per reparto.</div>
       <select class="input" id="lga-team" style="max-width:220px">${teamOpts}</select></div>
     <div class="gauge-grid">
       ${gaugeCard('Rosa completa',an.overall)}
       ${ROLES.map(r=>gaugeCard(ROLE_SHORT2[r],an.perRole[r])).join('')}
-    </div>`;
+    </div></div>`;
 }
 function viewLega(lg){
   const strat=linkedStrategy(lg);
@@ -172,12 +173,12 @@ function viewLega(lg){
     <div class="row" style="gap:8px"><a class="backbtn" href="leghe.html">${IC.back} Aste</a>
       <button class="btn sm" data-act="edit-lega">${IC.edit} Impostazioni</button></div></div>
   <div class="teams-cols">${lg.teams.map(t=>teamCard(lg,t)).join('')}</div>
+  ${isAdmin()?analisiHtml(lg):''}
   <div class="tabbar" style="margin:18px 0 14px">
     <button class="tabbtn ${R.legaTab==='giocatori'?'active':''}" data-legatab="giocatori">Giocatori</button>
     <button class="tabbtn ${R.legaTab==='formazioni'?'active':''}" data-legatab="formazioni">Formazioni squadre</button>
-    ${isAdmin()?`<button class="tabbtn ${R.legaTab==='analisi'?'active':''}" data-legatab="analisi">${IC.shield} Analisi</button>`:''}
   </div>
-  ${R.legaTab==='formazioni'?viewFormazioni():R.legaTab==='analisi'&&isAdmin()?analisiHtml(lg):viewGiocatori(lg)}`;
+  ${R.legaTab==='formazioni'?viewFormazioni():viewGiocatori(lg)}`;
 }
 function legaSettingsHtml(lg){
   const stratOpts=DB.auctions.map(a=>`<option value="${a.id}" ${lg.linkedStrategyId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
