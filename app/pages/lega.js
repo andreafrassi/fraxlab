@@ -158,7 +158,7 @@ function analisiHtml(lg){
   const an=teamAnalysis(lg,R.analisiTeamId);
   return`<div style="margin:0 0 22px">
     <div class="between" style="margin-bottom:14px;gap:10px;flex-wrap:wrap">
-      <div class="muted small">${IC.shield} Solo tu la vedi: quanto sono titolari, quanto possono rendere e quanto stiamo spendendo per reparto.</div>
+      <div class="muted small">Solo tu la vedi: quanto sono titolari, quanto possono rendere e quanto stiamo spendendo per reparto.</div>
       <select class="input" id="lga-team" style="max-width:220px">${teamOpts}</select></div>
     <div class="gauge-grid">
       ${gaugeCard('Rosa completa',an.overall)}
