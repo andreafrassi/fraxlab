@@ -113,13 +113,13 @@ const ROLE_SHORT2={P:'Porta',D:'Difesa',C:'Centrocampo',A:'Attacco'};
 function budgetTemplateRef(){return STRAT.template_budget.find(t=>t.id==='equilibrato')||STRAT.template_budget[0];}
 function teamAnalysis(lg,teamId){
   const roster=Object.entries(lg.assign).filter(([pid,a])=>a.teamId===teamId).map(([pid,a])=>({p:byId[+pid],price:a.price})).filter(x=>x.p);
-  const tpl=budgetTemplateRef();
+  const bt=budgetTargetDefaults(lg);
   const avg=vals=>{vals=vals.filter(v=>v!=null);return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;};
   const mk=list=>({tit:avg(list.map(x=>titIdx(x.p))),perf:avg(list.map(x=>perfIdx(x.p))),speso:list.reduce((s,x)=>s+x.price,0),n:list.length});
   const perRole={};
   ROLES.forEach(r=>{
     const list=roster.filter(x=>x.p.r===r),m=mk(list);
-    const target=lg.budget*(tpl.ripartizione_pct[r]||0);
+    const target=bt[r];
     m.budgetPct=list.length&&target>0?Math.round(m.speso/target*100):null;
     perRole[r]=m;
   });
@@ -180,12 +180,18 @@ function viewLega(lg){
   </div>
   ${R.legaTab==='formazioni'?viewFormazioni():viewGiocatori(lg)}`;
 }
+function budgetTargetDefaults(lg){
+  const tpl=budgetTemplateRef(),bt=lg.budgetTarget||{};
+  const out={};ROLES.forEach(r=>{out[r]=bt[r]!=null?bt[r]:Math.round(lg.budget*(tpl.ripartizione_pct[r]||0));});
+  return out;
+}
 function legaSettingsHtml(lg){
   const stratOpts=DB.auctions.map(a=>`<option value="${a.id}" ${lg.linkedStrategyId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
   /* Se è già collegata a una strategia, i crediti partono allineati a quella
      strategia (anche se nel frattempo il suo budget è cambiato altrove). */
   const linked=lg.linkedStrategyId&&DB.auctions.find(a=>a.id===lg.linkedStrategyId);
   const bval=linked?(linked.budget||500):lg.budget;
+  const bt=budgetTargetDefaults(lg);
   return `<div class="between" style="margin-bottom:14px"><h2 style="font-size:18px">Impostazioni asta</h2><button class="iconbtn" data-act="close">${IC.close}</button></div>
     <div class="field"><label for="lgs-n">Nome</label><input class="input" id="lgs-n" value="${esc(lg.name)}"></div>
     <div class="field"><label for="lgs-t">Numero di squadre</label><input class="input num" id="lgs-t" type="number" min="2" max="20" value="${lg.teams.length}"></div>
@@ -195,6 +201,10 @@ function legaSettingsHtml(lg){
     <div class="field"><label for="lgs-b">Crediti per squadra</label>
       <input class="input num" id="lgs-b" type="number" min="1" value="${bval}" ${linked?'readonly':''}>
       ${linked?`<div class="faint small" style="margin-top:4px">Segue automaticamente i crediti della strategia collegata. Scollega la strategia per impostarli a mano.</div>`:''}</div>
+    <div class="field"><label>Stima crediti per reparto</label>
+      <div class="faint small" style="margin-bottom:8px">Usata solo per l'indicatore "Budget" nell'analisi admin: quanto pensi di spendere in ogni reparto.</div>
+      <div class="row" style="gap:8px">${ROLES.map(r=>`<div style="flex:1"><label for="lgs-bt-${r}" class="faint small" style="display:block;margin-bottom:4px">${ROLE_SHORT2[r]}</label>
+        <input class="input num" id="lgs-bt-${r}" type="number" min="0" value="${bt[r]}"></div>`).join('')}</div></div>
     <button class="btn primary" data-act="save-lega-settings" style="width:100%">Salva</button>`;
 }
 function assignModalHtml(pid){
@@ -239,7 +249,8 @@ document.addEventListener('click',e=>{
       if(blocked){alert('Non posso ridurre le squadre: una di quelle rimosse ha già giocatori assegnati. Rimuovili prima o riducila di meno.');}
       else lg.teams=lg.teams.slice(0,n);
     }else if(n>lg.teams.length){lg.teams=lg.teams.concat(newTeams(n-lg.teams.length,lg.teams.length));}
-    lg.name=name;lg.budget=budget;lg.linkedStrategyId=$('#lgs-strat').value||null;save();closeModal();render();return;}
+    const budgetTarget={};ROLES.forEach(r=>{const el=$('#lgs-bt-'+r);budgetTarget[r]=el?Math.max(0,parseInt(el.value,10)||0):0;});
+    lg.name=name;lg.budget=budget;lg.linkedStrategyId=$('#lgs-strat').value||null;lg.budgetTarget=budgetTarget;save();closeModal();render();return;}
   if(d.act==='save-assign'){
     const pid=+d.pid,p=byId[pid],teamId=$('#as-team').value,price=parseFloat($('#as-price').value);
     if(teamRoleCount(lg,teamId,p.r,pid)>=ROSA[p.r]){alert('Questa squadra ha già il massimo di '+ROSA[p.r]+' '+ROLE_NAME[p.r].toLowerCase()+'.');return;}
