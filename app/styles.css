@@ -368,7 +368,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
 .tc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .tc-name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tc-team{font-size:10px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tc-price-box{flex:none;min-width:38px;padding:5px 6px;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r8);font-size:14px;font-weight:800;text-align:center;color:var(--text);line-height:1.1}
+.tc-price-box{flex:none;min-width:42px;padding:6px 10px;background:var(--warn);border:1px solid var(--warn);border-radius:var(--r8);font-size:16px;font-weight:800;text-align:center;color:#241a06;line-height:1.1;box-shadow:0 0 10px 1px rgba(245,181,68,.4)}
 .tc-rm{background:none;border:none;color:var(--faint);font-size:0;padding:3px;border-radius:5px;flex:none;display:flex}
 .tc-rm svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.4}
 .tc-rm:hover{color:var(--neg);background:rgba(251,111,111,.12)}
