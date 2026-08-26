@@ -430,7 +430,7 @@ function previewCard(p,extra,showMantra,targetPct,hideQt,cardCls,fasciaLabel){
      risaltare rispetto al resto. Quando non c'è una strategia (targetPct null)
      resta la normale quotazione tra le statistiche, come prima. */
   const qtBadge=(hideQt||targetPct!=null)?'':sp('qt','Quotazione',`${fmtPct(contextPct(p,budget))} · ${officialCredits(p,budget)} cr`);
-  const myPriceBox=(!hideQt&&targetPct!=null)?`<span class="tc-price-box num" title="Quanto avevi deciso di spendere nella tua strategia">${pctToCredits(targetPct)}</span>`:'';
+  const myPriceBox=(!hideQt&&targetPct!=null)?`<span class="tc-price-target num" title="Quanto avevi deciso di spendere nella tua strategia">${pctToCredits(targetPct)}</span>`:'';
   /* Ai non approvati resta solo l'identità: niente numeri, niente fascia.
      Il prezzo deciso da loro nella propria strategia però resta visibile. */
   const full=canViewStats();
