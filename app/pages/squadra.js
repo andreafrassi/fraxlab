@@ -30,12 +30,6 @@ function viewRosa(){
   const f=R.sqf,q=f.q.trim().toLowerCase();
   const roster=squadraRoster(),inSquad=id=>DB.squadra.players.includes(id);
   const counts={P:0,D:0,C:0,A:0};roster.forEach(p=>counts[p.r]++);
-  const teams=[...new Set(PLAYERS.map(p=>p.sq))].sort();
-  let arr=PLAYERS.filter(p=>{
-    if(f.r&&p.r!==f.r)return false;if(f.sq&&p.sq!==f.sq)return false;
-    if(q&&!(p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q)))return false;
-    return true;});
-  sortArr(arr,'qt');
   const roseHtml=roster.length?ROLES.map(r=>{
     const list=roster.filter(p=>p.r===r);if(!list.length)return'';
     const rows=list.map(p=>`<div class="tc-row">
@@ -45,25 +39,32 @@ function viewRosa(){
     </div>`).join('');
     return`<div class="tc-group"><div class="tc-group-label">${ROLE_NAME[r]} · ${list.length}/${ROSA[r]}</div>${rows}</div>`;
   }).join(''):`<div class="faint small" style="padding:6px 0">Nessun giocatore ancora</div>`;
+  /* Niente lista completa di 500+ giocatori aperta di default: solo la
+     ricerca, e i risultati (righe leggere, non le card intere) compaiono
+     appena scrivi almeno 2 lettere. */
+  let resultsHtml=`<div class="faint small" style="padding:14px 0">Scrivi almeno 2 lettere per cercare un giocatore.</div>`;
+  if(q.length>=2){
+    let results=PLAYERS.filter(p=>!inSquad(p.id)&&(p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q)));
+    sortArr(results,'qt');
+    results=results.slice(0,30);
+    resultsHtml=results.length?`<div class="tc-roster" style="max-height:none;margin-top:10px">${results.map(p=>{
+      const full=counts[p.r]>=ROSA[p.r];
+      return`<div class="tc-row">
+        <span class="chip ${p.r}" style="width:20px;height:20px;font-size:9px;border-radius:5px">${p.r}</span>
+        <div class="tc-info"><div class="tc-name">${esc(p.nome)}</div><div class="tc-team">${esc(p.sq)}</div></div>
+        <button class="iconbtn" data-sqadd="${p.id}" ${full?'disabled title="Reparto al completo"':'title="Aggiungi alla rosa"'}>${IC.plus}</button>
+      </div>`;
+    }).join('')}</div>`:`<div class="faint small" style="padding:14px 0">Nessun giocatore trovato.</div>`;
+  }
   return`<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap">
     <div style="flex:0 0 260px;min-width:220px">
       <div class="sec-title" style="margin-bottom:10px">La mia rosa · ${roster.length}/25</div>
       <div class="tc-roster" style="max-height:none">${roseHtml}</div>
     </div>
     <div style="flex:1;min-width:280px">
-      <div class="filters">
-        <input class="input" id="sqq" placeholder="Cerca…" value="${esc(f.q)}">
-        <select class="input" id="sqr"><option value="">Ruolo</option>${ROLES.map(r=>`<option value="${r}" ${f.r===r?'selected':''}>${r}</option>`).join('')}</select>
-        <select class="input" id="sqsq"><option value="">Squadra</option>${teams.map(t=>`<option ${f.sq===t?'selected':''}>${t}</option>`).join('')}</select>
-      </div>
-      <div class="muted small" style="margin:-4px 0 8px">${arr.length} giocatori</div>
-      <div class="plist">${arr.map(p=>{
-        const already=inSquad(p.id),full=!already&&counts[p.r]>=ROSA[p.r];
-        const extra=already
-          ?`<button class="iconbtn" style="color:var(--accent);border-color:var(--accent)" data-sqrm="${p.id}" title="Rimuovi dalla rosa">${IC.minus}</button>`
-          :`<button class="iconbtn" data-sqadd="${p.id}" ${full?'disabled title="Reparto al completo"':'title="Aggiungi alla rosa"'}>${IC.plus}</button>`;
-        return previewCard(p,extra,true,null,false);
-      }).join('')}</div>
+      <div class="sec-title" style="margin-bottom:10px">Cerca i tuoi giocatori</div>
+      <input class="input" id="sqq" placeholder="Cerca un giocatore da aggiungere…" value="${esc(f.q)}">
+      ${resultsHtml}
     </div>
   </div>`;
 }
@@ -130,7 +131,6 @@ function render(){
 }
 function bindSquadraFilters(){
   const q=$('#sqq');if(q)q.addEventListener('input',e=>{R.sqf.q=e.target.value;render();setTimeout(()=>{const el=$('#sqq');if(el){el.focus();el.selectionStart=el.value.length;}});});
-  [['#sqr','r'],['#sqsq','sq']].forEach(([sel,key])=>{const el=$(sel);if(el)el.addEventListener('change',e=>{R.sqf[key]=e.target.value;render();});});
   const mod=$('#sqmod');if(mod)mod.addEventListener('change',e=>{DB.squadra.formation=e.target.value;save();render();});
 }
 document.addEventListener('click',e=>{
