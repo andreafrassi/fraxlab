@@ -88,7 +88,7 @@ async function syncOnLogin(){
 let _uid=Date.now();const uid=p=>p+(++_uid);
 
 /* ---- runtime state (page scripts may add fields, e.g. R.gf, R.tab) ---- */
-let R={search:'',detailId:null,compareId:null};
+let R={search:'',detailId:null,compareId:null,cmpQ:''};
 
 /* ---- helpers ---- */
 const $=s=>document.querySelector(s);
@@ -551,7 +551,26 @@ function detailHtml(pid){
   const legend=cmp
     ?chartPlayers.map((pp,i)=>`<span style="color:${CMP_COLORS[i%CMP_COLORS.length]}">●&nbsp;${esc(pp.nome)}</span>`).join('')
     :`<span style="color:#3b82f6">●&nbsp;Fantamedia</span><span style="color:#34d399">●&nbsp;Media voto</span>`;
-  const cmpOpts=PLAYERS.filter(pp=>pp.r===p.r&&pp.id!==p.id).slice().sort((a,b)=>a.nome.localeCompare(b.nome));
+  /* Niente più il menu con tutti i giocatori del ruolo: solo ricerca, risultati
+     leggeri che compaiono appena scrivi (stesso pattern della scheda Squadra). */
+  const cmpQ=(R.cmpQ||'').trim().toLowerCase();
+  let cmpPickerHtml='';
+  if(cmp){
+    cmpPickerHtml=`<div class="row" style="gap:8px;align-items:center;margin-bottom:8px">
+      <span class="tag blue">Confronto con ${esc(cmp.nome)}</span>
+      <button class="iconbtn" data-comparerm="1" title="Rimuovi confronto">${IC.close}</button></div>`;
+  }else{
+    let cmpResultsHtml=`<div class="faint small" style="padding:8px 0">Scrivi almeno 2 lettere per cercare.</div>`;
+    if(cmpQ.length>=2){
+      const cmpResults=PLAYERS.filter(pp=>pp.r===p.r&&pp.id!==p.id&&pp.nome.toLowerCase().includes(cmpQ)).slice(0,10);
+      cmpResultsHtml=cmpResults.length?`<div class="tc-roster" style="max-height:200px;margin-bottom:4px">${cmpResults.map(pp=>`<div class="tc-row" data-comparepick="${pp.id}" style="cursor:pointer">
+          <span class="chip ${pp.r}" style="width:20px;height:20px;font-size:9px;border-radius:5px">${pp.r}</span>
+          <div class="tc-info"><div class="tc-name">${esc(pp.nome)}</div><div class="tc-team">${esc(pp.sq)}</div></div>
+        </div>`).join('')}</div>`
+        :`<div class="faint small" style="padding:8px 0">Nessun giocatore trovato.</div>`;
+    }
+    cmpPickerHtml=`<input class="input" id="cmpq" placeholder="Cerca un giocatore da confrontare…" value="${esc(R.cmpQ||'')}" style="margin-bottom:8px">${cmpResultsHtml}`;
+  }
   return `<div class="between" style="margin-bottom:4px"><div class="row"><span class="chip ${p.r}" style="width:28px;height:28px;font-size:13px">${p.r}</span>
       <div><h2 style="font-size:19px">${esc(p.nome)}</h2><div class="muted small">${esc(p.sq)} · Mantra: ${esc(p.rm)}</div>
       ${auctionBadge(p)?`<div style="margin-top:6px">${auctionBadge(p)}</div>`:''}</div></div>
@@ -567,10 +586,7 @@ function detailHtml(pid){
   ${chartSvg?`<div class="card" style="padding:14px 12px 8px;margin-bottom:14px">
     <div class="between" style="margin-bottom:4px;flex-wrap:wrap;gap:6px"><div class="sec-title" style="margin:0">Andamento per stagione</div>
       <div class="small" style="display:flex;gap:10px">${legend}</div></div>
-    <select class="input" data-compare="${p.id}" style="margin-bottom:8px">
-      <option value="">Confronta con un altro giocatore…</option>
-      ${cmpOpts.map(pp=>`<option value="${pp.id}" ${R.compareId===pp.id?'selected':''}>${esc(pp.nome)} (${esc(pp.sq)})</option>`).join('')}
-    </select>
+    ${cmpPickerHtml}
     ${chartSvg}</div>`:''}
   <div class="card" style="padding:8px 12px 4px"><table class="stats"><thead><tr><th>Stag.</th><th>PV</th><th>MV</th><th>FM</th><th>${heads[0]}</th><th>${heads[1]}</th><th>${heads[2]}</th></tr></thead><tbody>${strows}</tbody></table>
     ${p.nSeasons<2?'<div class="faint small" style="padding:8px 2px">Nessuno storico precedente rilevante in Serie A.</div>':''}</div>
@@ -580,7 +596,7 @@ function detailHtml(pid){
     `<button class="btn primary" data-act="add-obj" data-pid="${p.id}" style="width:100%;margin-bottom:8px">${IC.plus} Salva negli obiettivi</button>`}`
   :`<div class="faint small" style="margin-top:12px">Apri o crea una PreAsta per salvare questo giocatore tra i tuoi obiettivi.</div>`}`;
 }
-function openDetail(pid){R.detailId=pid;R.compareId=null;openModal(detailHtml(pid));}
+function openDetail(pid){R.detailId=pid;R.compareId=null;R.cmpQ='';openModal(detailHtml(pid));}
 
 /* ================= CREATE / EDIT STRATEGY MODAL (shared) ================= */
 function openAuctionModal(mode){
@@ -614,16 +630,18 @@ function openObjectiveModal(pid){openModal(objectiveModalHtml(pid));}
 
 /* ================= SHARED EVENTS (present on every page) ================= */
 document.addEventListener('click',e=>{
-  if(e.target.classList&&e.target.classList.contains('overlay')){closeModal();R.detailId=null;R.compareId=null;R.openSlot=null;return;}
-  const t=e.target.closest('[data-act],[data-open],[data-add],[data-open-auction],[data-ren],[data-dup],[data-del],[data-assign],[data-editassign],[data-unassign],[data-renteam],[data-open-lega],[data-ren-lega],[data-dup-lega],[data-del-lega],[data-formteam]');
+  if(e.target.classList&&e.target.classList.contains('overlay')){closeModal();R.detailId=null;R.compareId=null;R.cmpQ='';R.openSlot=null;return;}
+  const t=e.target.closest('[data-act],[data-open],[data-add],[data-open-auction],[data-ren],[data-dup],[data-del],[data-assign],[data-editassign],[data-unassign],[data-renteam],[data-open-lega],[data-ren-lega],[data-dup-lega],[data-del-lega],[data-formteam],[data-comparepick],[data-comparerm]');
   if(!t)return;const d=t.dataset;
   if(d.formteam){R.formTeam=d.formteam;if(typeof render==='function')render();return;}
+  if(d.comparepick){R.compareId=+d.comparepick;R.cmpQ='';openModal(detailHtml(R.detailId));return;}
+  if(d.comparerm!=null){R.compareId=null;R.cmpQ='';openModal(detailHtml(R.detailId));return;}
   if(d.ren){const a=DB.auctions.find(x=>x.id===d.ren);const n=prompt('Nome:',a.name);if(n&&n.trim()){a.name=n.trim();save();if(typeof render==='function')render();}return;}
   if(d.dup){const a=DB.auctions.find(x=>x.id===d.dup);const c=JSON.parse(JSON.stringify(a));c.id=uid('a');c.name=a.name+' (copia)';c.createdAt=Date.now();DB.auctions.push(c);save();if(typeof render==='function')render();return;}
   if(d.del){const a=DB.auctions.find(x=>x.id===d.del);if(confirm('Eliminare "'+a.name+'"?')){DB.auctions=DB.auctions.filter(x=>x.id!==d.del);save();if(typeof render==='function')render();}return;}
   if(d.openAuction){location.href='asta.html?id='+encodeURIComponent(d.openAuction);return;}
   const act=d.act;
-  if(act==='close'){closeModal();R.detailId=null;R.compareId=null;R.openSlot=null;return;}
+  if(act==='close'){closeModal();R.detailId=null;R.compareId=null;R.cmpQ='';R.openSlot=null;return;}
   if(act==='new-auction'){openAuctionModal('new');return;}
   if(act==='edit-auction'){openAuctionModal('edit');return;}
   if(act==='save-new'){const f=readForm();if(!f)return;const a=Object.assign({id:uid('a'),slots:[],notes:{},createdAt:Date.now()},f);DB.auctions.push(a);save();location.href='asta.html?id='+encodeURIComponent(a.id);return;}
@@ -650,6 +668,6 @@ document.addEventListener('click',e=>{
     if(sl){removeCand(sl.id,pid);if(typeof render==='function')render();}else{openObjectiveModal(pid);}return;}
 });
 document.addEventListener('input',e=>{const el=e.target;
-  if(el.dataset.note!=null){A().notes[el.dataset.note]=el.value;save();return;}});
-document.addEventListener('change',e=>{const el=e.target;
-  if(el.dataset.compare!=null){R.compareId=el.value?+el.value:null;openModal(detailHtml(R.detailId));return;}});
+  if(el.dataset.note!=null){A().notes[el.dataset.note]=el.value;save();return;}
+  if(el.id==='cmpq'){R.cmpQ=el.value;openModal(detailHtml(R.detailId));
+    setTimeout(()=>{const i=$('#cmpq');if(i){i.focus();i.selectionStart=i.value.length;}});return;}});
