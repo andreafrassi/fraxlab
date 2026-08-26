@@ -31,11 +31,11 @@ function teamCard(lg,t){
     if(!players.length)return'';
     const rows=players.map(({p,price})=>`<div class="tc-row">
       <span class="chip ${p.r}" style="width:20px;height:20px;font-size:9px;border-radius:5px">${p.r}</span>
+      <div class="tc-price-box num">${fmtCredits(price)}</div>
       <div class="tc-info">
         <div class="tc-name">${esc(p.nome)}</div>
         <div class="tc-team">${esc(p.sq)}</div>
       </div>
-      <div class="tc-price num">${fmtCredits(price)}</div>
       <button class="tc-rm" data-unassign="${p.id}" title="Rimuovi">${IC.close}</button>
     </div>`).join('');
     return `<div class="tc-group"><div class="tc-group-label">${ROLE_NAME[r]} · ${players.length}/${ROSA[r]}</div>${rows}</div>`;
