@@ -56,7 +56,8 @@ function teamCard(lg,t){
 function legaAssignExtra(lg,p){
   const as=lg.assign[p.id],team=as&&lg.teams.find(t=>t.id===as.teamId);
   if(team){const col=teamColor(lg,team.id);
-    return `<span class="tag" style="border-color:${col}66;color:${col};background:${col}1a;cursor:pointer" data-editassign="${p.id}" title="Modifica assegnazione">${esc(team.name)}<b>${fmtCredits(as.price)} cr</b></span>
+    return `<span class="tc-price-box num" data-editassign="${p.id}" style="cursor:pointer" title="Modifica assegnazione">${fmtCredits(as.price)}</span>
+       <span class="tag" style="border-color:${col}66;color:${col};background:${col}1a;cursor:pointer" data-editassign="${p.id}" title="Modifica assegnazione">${esc(team.name)}</span>
        <button class="iconbtn" data-unassign="${p.id}" title="Rimuovi assegnazione">${IC.close}</button>`;}
   return `<button class="iconbtn" data-assign="${p.id}" title="Assegna a una squadra">${IC.plus}</button>`;
 }
