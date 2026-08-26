@@ -27,6 +27,7 @@ function renderHomeView(){
       ${tileLink('aste.html','blue',IC.target,'Le tue strategie','Riprendi e confronta le tue bozze salvate.')}
       ${tileLink('listone.html','green',IC.list,'Il listone',nplayers+' giocatori, statistiche e valori consigliati.')}
       ${tileLink('leghe.html','pink',IC.gavel,'Asta','Squadre, crediti e assegnazione giocatori in tempo reale.')}
+      ${tileLink('squadra.html','amber',IC.team,'Squadra','Metti la tua rosa definitiva: ti consiglio chi schierare ogni settimana.')}
     </div>
     ${recentHtml}
   </div>`;
