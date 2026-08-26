@@ -425,20 +425,23 @@ function previewCard(p,extra,showMantra,targetPct,hideQt,cardCls,fasciaLabel){
   const sband=auctionBadge(p);
   const pband=isP?portiereBadge(p):'';
   const budget=contextBudget();
-  const qtBadge=hideQt?'':targetPct!=null
-    ?`<span class="sp target" title="Quanto avevi deciso di spendere nella tua strategia">${SIC.qt||''}Il tuo prezzo<b>${pctToCredits(targetPct)} cr</b></span>`
-    :sp('qt','Quotazione',`${fmtPct(contextPct(p,budget))} · ${officialCredits(p,budget)} cr`);
+  /* "Il tuo prezzo" (quanto avevi previsto di spendere nella tua strategia) non
+     sta più tra le altre statistiche: è un riquadro accanto al nome, per farlo
+     risaltare rispetto al resto. Quando non c'è una strategia (targetPct null)
+     resta la normale quotazione tra le statistiche, come prima. */
+  const qtBadge=(hideQt||targetPct!=null)?'':sp('qt','Quotazione',`${fmtPct(contextPct(p,budget))} · ${officialCredits(p,budget)} cr`);
+  const myPriceBox=(!hideQt&&targetPct!=null)?`<span class="tc-price-box num" title="Quanto avevi deciso di spendere nella tua strategia">${pctToCredits(targetPct)}</span>`:'';
   /* Ai non approvati resta solo l'identità: niente numeri, niente fascia.
      Il prezzo deciso da loro nella propria strategia però resta visibile. */
   const full=canViewStats();
   const stats=full
     ?[qtBadge,sp('eta','Età',p.age),sp('mv','Voto',mv!=null?mv.toFixed(2):null),sp('fm','Fantamedia',f!=null?f.toFixed(2):null),
       c1,c2,sp('pr','Presenze',pv),titBar(p),sp('fvm','FVM',p.fvm!=null?fmtPct(p.fvm/1000):null),sband,pband].join('')
-    :(targetPct!=null?qtBadge:'');
+    :'';
   const tier=full&&p.tiers['25/26']?tierBadge(p.tiers['25/26']):'';
   const fasciaHtml=fasciaLabel?`<div class="fascia-stripe" aria-hidden="true"><span>${esc(fasciaLabel)}</span></div>`:'';
   return `<div class="pcard${cardCls?' '+cardCls:''}" data-open="${p.id}">${fasciaHtml}${showMantra?playerAvatar(p):`<span class="chip ${p.r}">${p.r}</span>`}
-    <div class="pmid"><div class="pname">${esc(p.nome)}
+    <div class="pmid"><div class="pname">${esc(p.nome)}${myPriceBox}
       ${p.flags.includes('rigorista')?'<span class="tag gold" style="padding:1px 6px">rig</span>':''}</div>
       <div class="pmeta">${esc(p.sq)}${!showMantra&&tier?' · '+tier:''}</div>
       ${showMantra?`<div class="pmantra row" style="gap:4px;flex-wrap:wrap;margin-top:3px">${mantraTags(p)}</div>`:''}
