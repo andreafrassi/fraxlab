@@ -57,7 +57,7 @@ function viewRosa(){
         <select class="input" id="sqsq"><option value="">Squadra</option>${teams.map(t=>`<option ${f.sq===t?'selected':''}>${t}</option>`).join('')}</select>
       </div>
       <div class="muted small" style="margin:-4px 0 8px">${arr.length} giocatori</div>
-      <div class="plist">${arr.slice(0,150).map(p=>{
+      <div class="plist">${arr.map(p=>{
         const already=inSquad(p.id),full=!already&&counts[p.r]>=ROSA[p.r];
         const extra=already
           ?`<button class="iconbtn" style="color:var(--accent);border-color:var(--accent)" data-sqrm="${p.id}" title="Rimuovi dalla rosa">${IC.minus}</button>`
@@ -73,17 +73,17 @@ function viewFormazione(){
   if(!roster.length)return`<div class="empty">${IC.target}<div>Aggiungi prima la tua rosa nella scheda "Rosa"</div></div>`;
   const{titolari,panchina,need}=formazioneConsigliata();
   const modOpts=Object.keys(MODULI).map(m=>`<option value="${m}" ${DB.squadra.formation===m?'selected':''}>${m}</option>`).join('');
-  const row=p=>`<div class="tc-row">
+  const pitchChipFor=p=>`<div class="pchip" data-open="${p.id}" title="${esc(p.nome)} · ${esc(p.sq)} · punteggio consigliato ${Math.round(consiglioScore(p))}">
+    <div class="pchip-av ${p.r}">${p.r}</div><div class="pchip-nm">${esc(p.nome)}</div></div>`;
+  const benchRow=p=>`<div class="tc-row">
     <span class="chip ${p.r}" style="width:20px;height:20px;font-size:9px;border-radius:5px">${p.r}</span>
     <div class="tc-info"><div class="tc-name">${esc(p.nome)}</div><div class="tc-team">${esc(p.sq)}</div></div>
     ${titBar(p)}
     <div class="tc-price-box num" title="Punteggio consigliato (titolarità + performance)">${Math.round(consiglioScore(p))}</div>
   </div>`;
-  const block=(r,label)=>{
-    const tit=titolari[r],panch=panchina[r];
-    if(!tit.length&&!panch.length)return'';
-    return`<div class="tc-group"><div class="tc-group-label">${label} · ${tit.length===1?'titolare consigliato':'titolari consigliati'}</div>${tit.map(row).join('')}
-      ${panch.length?`<div class="tc-group-label" style="margin-top:8px">Riserve</div>${panch.map(row).join('')}`:''}</div>`;
+  const benchBlock=(r,label)=>{
+    const panch=panchina[r];if(!panch.length)return'';
+    return`<div class="tc-group"><div class="tc-group-label">${label}</div>${panch.map(benchRow).join('')}</div>`;
   };
   const missing=[];
   if(titolari.P.length<need.P)missing.push('un portiere');
@@ -94,8 +94,22 @@ function viewFormazione(){
       <div class="muted small">Consiglio basato su titolarità e performance attese per la 2026/27 — ricontrolla comunque a ridosso della giornata per infortuni dell'ultima ora.</div>
       <select class="input" id="sqmod" style="max-width:130px">${modOpts}</select></div>
     ${missing.length?`<div class="tc-warn">${IC.warn}Ti mancano ${missing.join(', ')} per completare il modulo ${esc(DB.squadra.formation)}</div>`:''}
+    <div class="pitch-panel">
+      <div class="pitch-field">
+        <div class="pitch-formation">${esc(DB.squadra.formation)}</div>
+        <div class="pitch-markings">
+          <div class="pm-circle"></div><div class="pm-halfway"></div>
+          <div class="pm-box"></div><div class="pm-arc pm-arc-l"></div><div class="pm-arc pm-arc-r"></div>
+        </div>
+        <div class="pitch-row">${titolari.A.map(pitchChipFor).join('')}</div>
+        <div class="pitch-row">${titolari.C.map(pitchChipFor).join('')}</div>
+        <div class="pitch-row">${titolari.D.map(pitchChipFor).join('')}</div>
+        <div class="pitch-row gk-row">${titolari.P.map(pitchChipFor).join('')}</div>
+      </div>
+    </div>
+    <div class="sec-title" style="margin:18px 0 10px">Riserve consigliate</div>
     <div class="tc-roster" style="max-height:none;gap:16px">
-      ${block('P','Portiere')}${block('D','Difesa')}${block('C','Centrocampo')}${block('A','Attacco')}
+      ${benchBlock('P','Portiere')}${benchBlock('D','Difesa')}${benchBlock('C','Centrocampo')}${benchBlock('A','Attacco')}
     </div>`;
 }
 
