@@ -257,6 +257,13 @@ textarea.input{min-height:70px;resize:vertical;line-height:1.5}
 .obj-outer.empty .obj-outer-label{opacity:.7}
 .obj-fascia-list{display:flex;flex-direction:column;gap:6px}
 .obj-cluster{display:flex;flex-direction:column;gap:6px;cursor:grab}
+.obj-move{display:flex;gap:4px;justify-content:flex-end}
+.obj-move-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;width:22px;height:20px;
+  display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex:none}
+.obj-move-btn:hover{color:var(--text);background:var(--surface3)}
+.obj-move-btn:disabled{opacity:.3;cursor:default}
+.obj-move-btn:disabled:hover{background:var(--surface2);color:var(--muted)}
+.obj-move-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
 .obj-cluster.dragging{opacity:.35}
 .obj-tile{position:relative;width:100%;height:87px;flex:none;border-radius:14px;padding:9px 12px;box-sizing:border-box}
 .obj-tile.empty{border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center}

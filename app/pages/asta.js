@@ -57,12 +57,18 @@ function objTile(p,cls,label,mine){
 function objTiles(slots,ph){
   const rows=SLOT_TAGS.map(([tagVal,tagLabel])=>{
     const fasciaSlots=slots.filter(s=>s.tag===tagVal),cls=TAG_COLOR[tagVal];
-    const clusters=fasciaSlots.map(sl=>{
+    const clusters=fasciaSlots.map((sl,i)=>{
       const p=byId[sl.cand[0].pid];if(!p)return'';
       const bought=!!sl.esito;
       const tileCls=bought?'bought':cls;
       const tile=objTile(p,tileCls,bought?'Preso':'',bought?sl.esito.pct:sl.cand[0].pct);
-      return `<div class="obj-cluster" data-slot="${sl.id}" draggable="true">${tile}</div>`;
+      const first=i===0,last=i===fasciaSlots.length-1;
+      return `<div class="obj-cluster" data-slot="${sl.id}" draggable="true">
+        <div class="obj-move">
+          <button class="obj-move-btn" data-moveslot="${sl.id}" data-dir="-1" ${first?'disabled':''} title="Sposta su">${IC.up}</button>
+          <button class="obj-move-btn" data-moveslot="${sl.id}" data-dir="1" ${last?'disabled':''} title="Sposta giù">${IC.down}</button>
+        </div>
+        ${tile}</div>`;
     }).join('');
     const addSlotTile=`<div class="obj-tile empty" data-addslot="${ph}|${tagVal}" style="cursor:pointer" title="Aggiungi obiettivo · ${tagLabel}"><span class="ot-plus">+</span></div>`;
     return `<div class="obj-outer ${cls}${fasciaSlots.length?'':' empty'}" data-fascia="${tagVal}">
@@ -144,8 +150,9 @@ function render(){
 
 /* ---- workspace-only events ---- */
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-tab],[data-phase],[data-buy],[data-rmcand],[data-addslot],[data-undo],[data-pick],[data-slot]');
+  const t=e.target.closest('[data-tab],[data-phase],[data-buy],[data-rmcand],[data-addslot],[data-undo],[data-pick],[data-slot],[data-moveslot]');
   if(!t)return;const d=t.dataset;
+  if(d.moveslot){moveSlot(d.moveslot,+d.dir);render();return;}
   if(d.slot){openSlotModal(d.slot);return;}
   if(d.tab){R.tab=d.tab;render();return;}
   if(d.phase){R.phase=d.phase;R.af.rm='';R.tab='assistente';render();window.scrollTo(0,0);return;}
@@ -173,6 +180,17 @@ function reorderSlot(draggedId,targetId,after,tag){
   if(tag)dragged.tag=tag;
   const ti=targetId?a.slots.findIndex(s=>s.id===targetId):-1;
   if(ti<0){a.slots.push(dragged);}else{a.slots.splice(after?ti+1:ti,0,dragged);}
+  save();
+}
+/* Alternativa alle freccette per chi trova più comodo un click che il
+   drag&drop: scambia la posizione con il vicino nella stessa fascia/ruolo. */
+function moveSlot(slotId,dir){
+  const a=A();if(!a)return;
+  const sl=a.slots.find(s=>s.id===slotId);if(!sl)return;
+  const siblings=a.slots.filter(s=>s.tag===sl.tag&&s.r===sl.r);
+  const si=siblings.indexOf(sl),swapWith=siblings[si+dir];if(!swapWith)return;
+  const i1=a.slots.indexOf(sl),i2=a.slots.indexOf(swapWith);
+  a.slots[i1]=swapWith;a.slots[i2]=sl;
   save();
 }
 document.addEventListener('dragstart',e=>{
