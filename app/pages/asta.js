@@ -141,11 +141,16 @@ function renderNav(){
 }
 function render(){
   if(!A()){location.href='aste.html';return;}
+  /* .asst-obj scrolla al suo interno (position:sticky + overflow-y:auto):
+     ricostruendo tutto il DOM a ogni render (spostare un obiettivo, comprare,
+     ecc.) perderebbe quella posizione e la vista "salterebbe" in cima. */
+  const prevScroll=$('.asst-obj')?$('.asst-obj').scrollTop:null;
   renderTop('aste'); renderNav();
   const v=$('#view');
   if(R.tab==='formazioni') v.innerHTML=viewFormazioni();
   else { v.innerHTML=viewAssistente(); bindAssist(); }
   if(R.openSlot) renderSlotModal();
+  if(prevScroll!=null){const el=$('.asst-obj');if(el)el.scrollTop=prevScroll;}
 }
 
 /* ---- workspace-only events ---- */
