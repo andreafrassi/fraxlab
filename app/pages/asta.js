@@ -14,8 +14,11 @@ function viewAssistente(){
   let arr=PLAYERS.filter(p=>p.r===ph&&(!f.sq||p.sq===f.sq)&&(!f.rm||matchMantra(p,f.rm))&&(!q||p.nome.toLowerCase().includes(q)||p.sq.toLowerCase().includes(q)));
   sortArr(arr,f.sort);
   const idx=ROLES.indexOf(ph);
-  return `<div class="between" style="margin-bottom:6px"><h1 style="font-size:19px">Assistente · ${esc(a.name)}</h1>
-    <button class="btn sm" data-act="edit-auction">${IC.edit} Impostazioni</button></div>
+  return `<div class="between" style="margin-bottom:6px;flex-wrap:wrap;gap:8px"><h1 style="font-size:19px">Assistente · ${esc(a.name)}</h1>
+    <div class="row" style="gap:6px">
+      <button class="btn sm" data-act="export-md">${IC.copy} Esporta in Markdown</button>
+      <button class="btn sm" data-act="edit-auction">${IC.edit} Impostazioni</button>
+    </div></div>
   <div class="stepper" style="margin-bottom:18px">${stepper}</div>
 
   <div class="asst-grid">
@@ -178,6 +181,38 @@ document.addEventListener('change',e=>{const el=e.target;
 
 /* ---- drag & drop: grab an objective card and drop it on another fascia box (empty or not)
    to move it there; dropping on a card within the same box reorders it. ---- */
+/* Markdown pulito, diviso per reparto e fascia: pensato per essere incollato
+   così com'è su un altro sito (blog, forum, ecc.), non per essere riletto
+   dall'app stessa. */
+function exportStrategiaMarkdown(a){
+  const lines=[`# ${a.name}`,'',`Budget: ${a.budget} crediti`,''];
+  ROLES.forEach(r=>{
+    const roleSlots=a.slots.filter(s=>s.r===r);
+    if(!roleSlots.length)return;
+    lines.push(`## ${ROLE_NAME[r]}`,'');
+    SLOT_TAGS.forEach(([tagVal,tagLabel])=>{
+      const fasciaSlots=roleSlots.filter(s=>s.tag===tagVal);
+      if(!fasciaSlots.length)return;
+      lines.push(`### ${tagLabel}`);
+      fasciaSlots.forEach(sl=>{
+        const p=byId[sl.cand[0].pid];if(!p)return;
+        const bought=!!sl.esito,pct=bought?sl.esito.pct:sl.cand[0].pct;
+        const note=a.notes&&a.notes[p.id];
+        lines.push(`- **${p.nome}** (${p.sq}) — ${fmtCr(pct,a.budget)}${bought?' · preso':''}${note?` — _${note}_`:''}`);
+      });
+      lines.push('');
+    });
+  });
+  return lines.join('\n');
+}
+function downloadText(filename,content){
+  const blob=new Blob([content],{type:'text/markdown'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download=filename;
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 function reorderSlot(draggedId,targetId,after,tag){
   const a=A();if(!a)return;
   const di=a.slots.findIndex(s=>s.id===draggedId);if(di<0)return;

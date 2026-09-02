@@ -644,6 +644,7 @@ document.addEventListener('click',e=>{
   if(act==='close'){closeModal();R.detailId=null;R.compareId=null;R.cmpQ='';R.openSlot=null;return;}
   if(act==='new-auction'){openAuctionModal('new');return;}
   if(act==='edit-auction'){openAuctionModal('edit');return;}
+  if(act==='export-md'){const a=A();if(a)downloadText(a.name.replace(/[^a-z0-9]+/gi,'-')+'.md',exportStrategiaMarkdown(a));return;}
   if(act==='save-new'){const f=readForm();if(!f)return;const a=Object.assign({id:uid('a'),slots:[],notes:{},createdAt:Date.now()},f);DB.auctions.push(a);save();location.href='asta.html?id='+encodeURIComponent(a.id);return;}
   if(act==='save-edit'){const f=readForm();if(!f)return;Object.assign(A(),f);save();closeModal();if(typeof render==='function')render();return;}
   if(act==='add-obj'){openObjectiveModal(+d.pid);return;}
