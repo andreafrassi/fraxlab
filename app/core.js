@@ -173,7 +173,20 @@ function seasonChart(players){
 function slotOf(pid){const a=A();return a&&a.slots.find(sl=>sl.cand.some(c=>c.pid===pid));}
 function addSlot(pid,opts){const a=A(),p=byId[pid];if(!a||!p||slotOf(pid))return;
   const pct=opts&&opts.pct!=null&&!isNaN(opts.pct)?opts.pct:suggPct(p);
-  a.slots.push({id:uid('s'),r:p.r,tag:(opts&&opts.tag)||'top',cand:[{pid,pct,note:''}],esito:null});save();}
+  const tag=(opts&&opts.tag)||'top';
+  const slot={id:uid('s'),r:p.r,tag,cand:[{pid,pct,note:''}],esito:null};
+  /* Va inserito subito nell'ordine giusto per prezzo (dal più caro al più
+     economico) tra chi è già nella stessa fascia dello stesso ruolo, non
+     sempre in fondo: altrimenti bisognerebbe sempre risistemarlo a mano
+     con le freccette o trascinandolo. */
+  let insertAt=a.slots.length;
+  for(let i=0;i<a.slots.length;i++){
+    const s=a.slots[i];if(s.r!==p.r||s.tag!==tag)continue;
+    const sPct=s.esito?s.esito.pct:s.cand[0].pct;
+    if(sPct<pct){insertAt=i;break;}
+    insertAt=i+1;
+  }
+  a.slots.splice(insertAt,0,slot);save();}
 function removeCand(sid,pid){const a=A(),sl=a&&a.slots.find(x=>x.id===sid);if(!sl)return;sl.cand=sl.cand.filter(c=>c.pid!==pid);if(!sl.cand.length)a.slots=a.slots.filter(x=>x.id!==sid);save();}
 function budgetStats(a){a=a||A();let speso=0,impegnato=0;const per={P:{pl:0,got:0},D:{pl:0,got:0},C:{pl:0,got:0},A:{pl:0,got:0}};
   a.slots.forEach(sl=>{const RR=per[sl.r];if(!RR)return;if(sl.esito){speso+=sl.esito.pct;RR.pl+=sl.esito.pct;RR.got++;}else{const v=sl.cand[0].pct;impegnato+=v;RR.pl+=v;}});
