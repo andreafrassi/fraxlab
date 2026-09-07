@@ -247,7 +247,8 @@ const SIC={
   pr:'<svg viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11M6 2v3M10 2v3"/></svg>',
   fvm:'<svg viewBox="0 0 16 16"><path d="M2.5 13.5v-4M6.5 13.5v-7M10.5 13.5v-9M14.5 13.5V6"/></svg>',
   trophy:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5v7M6 6.3c0-.9.9-1.4 2-1.4s2 .5 2 1.3c0 1.7-4 .8-4 2.5 0 .8.9 1.3 2 1.3s2-.5 2-1.4"/></svg>',
-  qt:'<svg viewBox="0 0 16 16"><path d="M2 8.3V3a1 1 0 0 1 1-1h5.3a1 1 0 0 1 .7.3L13.7 7a1 1 0 0 1 0 1.4L8.9 13.2a1 1 0 0 1-1.4 0L2.3 8.9A1 1 0 0 1 2 8.3z"/><circle cx="5.2" cy="5.2" r="1"/></svg>'
+  qt:'<svg viewBox="0 0 16 16"><path d="M2 8.3V3a1 1 0 0 1 1-1h5.3a1 1 0 0 1 .7.3L13.7 7a1 1 0 0 1 0 1.4L8.9 13.2a1 1 0 0 1-1.4 0L2.3 8.9A1 1 0 0 1 2 8.3z"/><circle cx="5.2" cy="5.2" r="1"/></svg>',
+  pma:'<svg viewBox="0 0 16 16"><path d="M3 13h10M5.5 13V7M8 13V5M10.5 13V8"/><path d="M2.5 5l4-2.5 4 2 3-2"/></svg>'
 };
 const GIORNATE=38,TBAR_SEGS=5;
 function titIdx(p){return p.titProb==null?null:p.titProb;}
@@ -450,7 +451,8 @@ function previewCard(p,extra,showMantra,targetPct,hideQt,cardCls,fasciaLabel){
   const full=canViewStats();
   const stats=full
     ?[qtBadge,sp('eta','Età',p.age),sp('mv','Voto',mv!=null?mv.toFixed(2):null),sp('fm','Fantamedia',f!=null?f.toFixed(2):null),
-      c1,c2,sp('pr','Presenze',pv),titBar(p),sp('fvm','FVM',p.fvm!=null?fmtPct(p.fvm/1000):null),sband,pband].join('')
+      c1,c2,sp('pr','Presenze',pv),titBar(p),sp('fvm','FVM',p.fvm!=null?fmtPct(p.fvm/1000):null),
+      sp('pma','Prezzo medio asta',p.prezzoMedioAsta!=null?pctToCredits(p.prezzoMedioAsta/500)+' cr':null),sband,pband].join('')
     :'';
   const tier=full&&p.tiers['25/26']?tierBadge(p.tiers['25/26']):'';
   const fasciaHtml=fasciaLabel?`<div class="fascia-stripe" aria-hidden="true"><span>${esc(fasciaLabel)}</span></div>`:'';
