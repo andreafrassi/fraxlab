@@ -446,18 +446,19 @@ function previewCard(p,extra,showMantra,targetPct,hideQt,cardCls,fasciaLabel){
      resta la normale quotazione tra le statistiche, come prima. */
   const qtBadge=(hideQt||targetPct!=null)?'':sp('qt','Quotazione',`${fmtPct(contextPct(p,budget))} · ${officialCredits(p,budget)} cr`);
   const myPriceBox=(!hideQt&&targetPct!=null)?`<span class="tc-price-target num" title="Quanto avevi deciso di spendere nella tua strategia">${pctToCredits(targetPct)}</span>`:'';
+  const pmaBox=(!hideQt&&targetPct!=null&&p.prezzoMedioAsta!=null)?`<span class="tc-price-box num" title="Prezzo medio asta reale">${pctToCredits(p.prezzoMedioAsta/500)}</span>`:'';
   /* Ai non approvati resta solo l'identità: niente numeri, niente fascia.
      Il prezzo deciso da loro nella propria strategia però resta visibile. */
   const full=canViewStats();
   const stats=full
     ?[qtBadge,sp('eta','Età',p.age),sp('mv','Voto',mv!=null?mv.toFixed(2):null),sp('fm','Fantamedia',f!=null?f.toFixed(2):null),
       c1,c2,sp('pr','Presenze',pv),titBar(p),sp('fvm','FVM',p.fvm!=null?fmtPct(p.fvm/1000):null),
-      sp('pma','Prezzo medio asta',p.prezzoMedioAsta!=null?pctToCredits(p.prezzoMedioAsta/500)+' cr':null),sband,pband].join('')
+      pmaBox?'':sp('pma','Prezzo medio asta',p.prezzoMedioAsta!=null?pctToCredits(p.prezzoMedioAsta/500)+' cr':null),sband,pband].join('')
     :'';
   const tier=full&&p.tiers['25/26']?tierBadge(p.tiers['25/26']):'';
   const fasciaHtml=fasciaLabel?`<div class="fascia-stripe" aria-hidden="true"><span>${esc(fasciaLabel)}</span></div>`:'';
   return `<div class="pcard${cardCls?' '+cardCls:''}" data-open="${p.id}">${fasciaHtml}${showMantra?playerAvatar(p):`<span class="chip ${p.r}">${p.r}</span>`}
-    <div class="pmid"><div class="pname">${esc(p.nome)}${myPriceBox}
+    <div class="pmid"><div class="pname">${esc(p.nome)}${myPriceBox}${pmaBox}
       ${p.flags.includes('rigorista')?'<span class="tag gold" style="padding:1px 6px">rig</span>':''}</div>
       <div class="pmeta">${esc(p.sq)}${!showMantra&&tier?' · '+tier:''}</div>
       ${showMantra?`<div class="pmantra row" style="gap:4px;flex-wrap:wrap;margin-top:3px">${mantraTags(p)}</div>`:''}
