@@ -195,7 +195,8 @@ function exportStrategiaMarkdown(a){
         const p=byId[sl.cand[0].pid];if(!p)return;
         const bought=!!sl.esito,pct=bought?sl.esito.pct:sl.cand[0].pct;
         const note=a.notes&&a.notes[p.id];
-        lines.push(`- **${p.nome}** (${p.sq}) — ${fmtCr(pct,a.budget)}${bought?' · preso':''}${note?` — _${note}_`:''}`);
+        const pma=p.prezzoMedioAsta!=null?pctToCredits(p.prezzoMedioAsta/500,a.budget)+' cr':null;
+        lines.push(`- **${p.nome}** (${p.sq}) — ${fmtCr(pct,a.budget)}${pma?` · medio asta ${pma}`:''}${bought?' · preso':''}${note?` — _${note}_`:''}`);
       });
       lines.push('');
     });
