@@ -19,22 +19,30 @@ function migrateAuction(a){const b=a.budget||500;
     if(sl.tag==null||LEGACY_TAG_MAP[sl.tag]!=null)sl.tag=LEGACY_TAG_MAP[sl.tag||'']||'top';
     if(sl.cand&&sl.cand.length>1){const keep=sl.esito&&sl.cand.find(c=>c.pid===sl.esito.pid);sl.cand=[keep||sl.cand[0]];}});
   a.budget=b;delete a.participants;return a;}
-/* Rosa presa all'asta NDICKAZZA-THE (set 2026): seed iniziale delle squadre
-   finché non ce n'è ancora una salvata, così non va reinserita giocatore per
-   giocatore a mano dal listone. */
-const SQUADRA_SEED=[5841,4485,610,6956,4317,5514,2514,6496,7219,4502,5695,2423,1870,5687,7625,7223,1850,7060,6151,7071,2061,6060,5694,6572,6904];
-const defaultSquadre=()=>[{id:uid('q'),name:'NDICKAZZATHE',players:SQUADRA_SEED.slice(),formation:'3-4-3',createdAt:Date.now()}];
+/* Rose prese dalle varie aste: elenco a cui aggiungere in futuro (nome +
+   lista id giocatori). Ogni voce che non esiste ancora tra le squadre salvate
+   (per nome) viene creata al primo caricamento dopo il deploy — così una
+   nuova squadra si aggiunge senza toccare la logica sotto. */
+const SQUADRE_SEED=[
+  {name:'NDICKAZZATHE',players:[5841,4485,610,6956,4317,5514,2514,6496,7219,4502,5695,2423,1870,5687,7625,7223,1850,7060,6151,7071,2061,6060,5694,6572,6904]},
+  {name:'MANCOSU DI FALDI',players:[5841,7048,4485,6217,5022,5365,7294,5838,5526,5010,4502,2517,7129,184,5888,5823,6908,6677,6398,5585,6060,6904,7449,7252,6556]}
+];
+function seedMissingSquadre(squadre){
+  SQUADRE_SEED.forEach(seed=>{if(!squadre.some(s=>s.name===seed.name))
+    squadre.push({id:uid('q'),name:seed.name,players:seed.players.slice(),formation:'3-4-3',createdAt:Date.now()});});
+  return squadre;
+}
 /* Prima delle squadre multiple c'era un solo oggetto `squadra` senza id/nome:
    lo si porta nel nuovo formato ad array, chiamandolo come l'unica squadra
    che esisteva finora. */
 function migrateSquadre(list){return(list||[]).map(s=>({id:s.id||uid('q'),name:s.name||'NDICKAZZATHE',players:s.players||[],formation:s.formation||'3-4-3',createdAt:s.createdAt||Date.now()}));}
 function loadDB(){let r;try{r=JSON.parse(localStorage.getItem(LS));}catch(e){}
   if(r&&r.v===2&&r.auctions){
-    const squadre=r.squadre?migrateSquadre(r.squadre):(r.squadra?migrateSquadre([Object.assign({name:'NDICKAZZATHE'},r.squadra)]):defaultSquadre());
+    const squadre=seedMissingSquadre(r.squadre?migrateSquadre(r.squadre):(r.squadra?migrateSquadre([Object.assign({name:'NDICKAZZATHE'},r.squadra)]):[]));
     return{v:2,auctions:r.auctions.map(migrateAuction),leghe:r.leghe||[],squadre};
   }
-  if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)],leghe:[],squadre:defaultSquadre()};}
-  return{v:2,auctions:[],leghe:[],squadre:defaultSquadre()};}
+  if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)],leghe:[],squadre:seedMissingSquadre([])};}
+  return{v:2,auctions:[],leghe:[],squadre:seedMissingSquadre([])};}
 let DB=loadDB();
 function save(){localStorage.setItem(LS,JSON.stringify(DB));scheduleCloudPush();}
 
@@ -59,8 +67,8 @@ function scheduleCloudPush(){
    squadra", non "primo avvio". */
 function normalizeCloudDB(d){
   d=d||{};
-  return{v:2,auctions:(d.auctions||[]).map(migrateAuction),leghe:d.leghe||[],
-    squadre:d.squadre?migrateSquadre(d.squadre):(d.squadra?migrateSquadre([Object.assign({name:'NDICKAZZATHE'},d.squadra)]):[])};
+  const squadre=seedMissingSquadre(d.squadre?migrateSquadre(d.squadre):(d.squadra?migrateSquadre([Object.assign({name:'NDICKAZZATHE'},d.squadra)]):[]));
+  return{v:2,auctions:(d.auctions||[]).map(migrateAuction),leghe:d.leghe||[],squadre};
 }
 const isEmptyDB=d=>!(d&&(((d.auctions||[]).length)||((d.leghe||[]).length)||((d.squadre||[]).some(s=>s.players&&s.players.length))));
 function mergeDBs(local,cloud){
