@@ -1,5 +1,5 @@
 "use strict";
-if(!DB.squadra)DB.squadra=defaultSquadra();
+if(!SQ()){location.href='squadre.html';}
 R.sqTab=R.sqTab||'rosa';
 R.sqf=R.sqf||{q:'',r:'',sq:''};
 
@@ -9,14 +9,14 @@ const MODULI={
   '4-3-3':{D:4,C:3,A:3},'4-4-2':{D:4,C:4,A:2},'4-5-1':{D:4,C:5,A:1},
   '5-3-2':{D:5,C:3,A:2},'5-4-1':{D:5,C:4,A:1}
 };
-const squadraRoster=()=>DB.squadra.players.map(id=>byId[id]).filter(Boolean);
+const squadraRoster=()=>SQ().players.map(id=>byId[id]).filter(Boolean);
 /* Punteggio "chi mettere": titolarità pesa un po' di più della qualità attesa,
    perché un titolare mediocre porta comunque un voto quando un panchinaro forte
    rischia di restare fuori. Chi non ha ancora dati (nuovi arrivi) parte da un
    valore neutro invece di essere escluso a priori. */
 const consiglioScore=p=>{const t=titIdx(p),f=perfIdx(p);return(t==null?40:t)*0.55+(f==null?40:f)*0.45;};
 function formazioneConsigliata(){
-  const mod=MODULI[DB.squadra.formation]||MODULI['3-4-3'];
+  const sq=SQ(),mod=MODULI[sq.formation]||MODULI['3-4-3'];
   const byRole={P:[],D:[],C:[],A:[]};
   squadraRoster().forEach(p=>byRole[p.r].push(p));
   ROLES.forEach(r=>byRole[r].sort((a,b)=>consiglioScore(b)-consiglioScore(a)));
@@ -27,8 +27,8 @@ function formazioneConsigliata(){
 }
 
 function viewRosa(){
-  const f=R.sqf,q=f.q.trim().toLowerCase();
-  const roster=squadraRoster(),inSquad=id=>DB.squadra.players.includes(id);
+  const sq=SQ(),f=R.sqf,q=f.q.trim().toLowerCase();
+  const roster=squadraRoster(),inSquad=id=>sq.players.includes(id);
   const counts={P:0,D:0,C:0,A:0};roster.forEach(p=>counts[p.r]++);
   const roseHtml=roster.length?ROLES.map(r=>{
     const list=roster.filter(p=>p.r===r);if(!list.length)return'';
@@ -70,10 +70,10 @@ function viewRosa(){
 }
 
 function viewFormazione(){
-  const roster=squadraRoster();
+  const sq=SQ(),roster=squadraRoster();
   if(!roster.length)return`<div class="empty">${IC.target}<div>Aggiungi prima la tua rosa nella scheda "Rosa"</div></div>`;
   const{titolari,panchina,need}=formazioneConsigliata();
-  const modOpts=Object.keys(MODULI).map(m=>`<option value="${m}" ${DB.squadra.formation===m?'selected':''}>${m}</option>`).join('');
+  const modOpts=Object.keys(MODULI).map(m=>`<option value="${m}" ${sq.formation===m?'selected':''}>${m}</option>`).join('');
   const pitchChipFor=p=>`<div class="pchip" data-open="${p.id}" title="${esc(p.nome)} · ${esc(p.sq)} · punteggio consigliato ${Math.round(consiglioScore(p))}">
     <div class="pchip-av ${p.r}">${p.r}</div><div class="pchip-nm">${esc(p.nome)}</div></div>`;
   const benchRow=p=>`<div class="tc-row">
@@ -94,10 +94,10 @@ function viewFormazione(){
   return`<div class="between" style="margin-bottom:14px;gap:10px;flex-wrap:wrap">
       <div class="muted small">Consiglio basato su titolarità e performance attese per la 2026/27 — ricontrolla comunque a ridosso della giornata per infortuni dell'ultima ora.</div>
       <select class="input" id="sqmod" style="max-width:130px">${modOpts}</select></div>
-    ${missing.length?`<div class="tc-warn">${IC.warn}Ti mancano ${missing.join(', ')} per completare il modulo ${esc(DB.squadra.formation)}</div>`:''}
+    ${missing.length?`<div class="tc-warn">${IC.warn}Ti mancano ${missing.join(', ')} per completare il modulo ${esc(sq.formation)}</div>`:''}
     <div class="pitch-panel">
       <div class="pitch-field">
-        <div class="pitch-formation">${esc(DB.squadra.formation)}</div>
+        <div class="pitch-formation">${esc(sq.formation)}</div>
         <div class="pitch-markings">
           <div class="pm-circle"></div><div class="pm-halfway"></div>
           <div class="pm-box"></div><div class="pm-arc pm-arc-l"></div><div class="pm-arc pm-arc-r"></div>
@@ -115,12 +115,14 @@ function viewFormazione(){
 }
 
 function render(){
+  const sq=SQ();if(!sq){location.href='squadre.html';return;}
   renderTop(null);
   $('#view').innerHTML=`<div style="max-width:920px;margin:0 auto">
     <div class="between" style="margin-bottom:14px;flex-wrap:wrap;gap:10px">
-      <div><h1 style="font-size:20px">La mia squadra</h1>
+      <div><div class="row" style="gap:8px"><h1 style="font-size:20px">${esc(sq.name)}</h1>
+        <button class="iconbtn" data-act="ren-squadra" title="Rinomina squadra">${IC.edit}</button></div>
         <div class="muted small">La tua rosa definitiva: da qui ogni settimana ti consiglio chi schierare.</div></div>
-      <a class="backbtn" href="index.html">${IC.back} Home</a></div>
+      <a class="backbtn" href="squadre.html">${IC.back} Le tue squadre</a></div>
     <div class="tabbar" style="margin-bottom:16px">
       <button class="tabbtn ${R.sqTab==='rosa'?'active':''}" data-sqtab="rosa">Rosa</button>
       <button class="tabbtn ${R.sqTab==='formazione'?'active':''}" data-sqtab="formazione">Formazione consigliata</button>
@@ -131,17 +133,18 @@ function render(){
 }
 function bindSquadraFilters(){
   const q=$('#sqq');if(q)q.addEventListener('input',e=>{R.sqf.q=e.target.value;render();setTimeout(()=>{const el=$('#sqq');if(el){el.focus();el.selectionStart=el.value.length;}});});
-  const mod=$('#sqmod');if(mod)mod.addEventListener('change',e=>{DB.squadra.formation=e.target.value;save();render();});
+  const mod=$('#sqmod');if(mod)mod.addEventListener('change',e=>{SQ().formation=e.target.value;save();render();});
 }
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-sqtab],[data-sqadd],[data-sqrm]');if(!t)return;const d=t.dataset;
+  const t=e.target.closest('[data-sqtab],[data-sqadd],[data-sqrm],[data-act="ren-squadra"]');if(!t)return;const d=t.dataset;
+  if(d.act==='ren-squadra'){const sq=SQ();const n=prompt('Nome squadra:',sq.name);if(n&&n.trim()){sq.name=n.trim();save();render();}return;}
   if(d.sqtab){R.sqTab=d.sqtab;render();return;}
   if(d.sqadd){
-    const p=byId[+d.sqadd];
-    if(DB.squadra.players.length>=25){alert('La rosa è già completa (25/25).');return;}
-    if(DB.squadra.players.filter(id=>{const x=byId[id];return x&&x.r===p.r;}).length>=ROSA[p.r]){
+    const sq=SQ(),p=byId[+d.sqadd];
+    if(sq.players.length>=25){alert('La rosa è già completa (25/25).');return;}
+    if(sq.players.filter(id=>{const x=byId[id];return x&&x.r===p.r;}).length>=ROSA[p.r]){
       alert('Hai già il massimo di '+ROSA[p.r]+' '+ROLE_NAME[p.r].toLowerCase()+'.');return;}
-    DB.squadra.players.push(+d.sqadd);save();render();return;}
-  if(d.sqrm){DB.squadra.players=DB.squadra.players.filter(id=>id!==+d.sqrm);save();render();return;}
+    sq.players.push(+d.sqadd);save();render();return;}
+  if(d.sqrm){const sq=SQ();sq.players=sq.players.filter(id=>id!==+d.sqrm);save();render();return;}
 });
 render();

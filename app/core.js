@@ -10,6 +10,8 @@ const SLOT_TAGS=[['top','TOP'],['semitop','SEMI-TOP'],['terza','TERZA FASCIA'],[
 const TAG_COLOR={top:'violet',semitop:'blue',terza:'amber',quarta:'cyan',scommesse:'pink'};
 const LEGACY_TAG_MAP={'':'top',prima:'top',sicurezza:'semitop',pianob:'terza',scommessa:'scommesse'};
 
+let _uid=Date.now();const uid=p=>p+(++_uid);
+
 /* ---- persisted DB ---- */
 const LS='fantaasta_v1';
 function migrateAuction(a){const b=a.budget||500;
@@ -17,15 +19,22 @@ function migrateAuction(a){const b=a.budget||500;
     if(sl.tag==null||LEGACY_TAG_MAP[sl.tag]!=null)sl.tag=LEGACY_TAG_MAP[sl.tag||'']||'top';
     if(sl.cand&&sl.cand.length>1){const keep=sl.esito&&sl.cand.find(c=>c.pid===sl.esito.pid);sl.cand=[keep||sl.cand[0]];}});
   a.budget=b;delete a.participants;return a;}
-/* Rosa presa all'asta NDICKAZZA-THE (set 2026): seed iniziale di "La mia squadra"
+/* Rosa presa all'asta NDICKAZZA-THE (set 2026): seed iniziale delle squadre
    finché non ce n'è ancora una salvata, così non va reinserita giocatore per
    giocatore a mano dal listone. */
 const SQUADRA_SEED=[5841,4485,610,6956,4317,5514,2514,6496,7219,4502,5695,2423,1870,5687,7625,7223,1850,7060,6151,7071,2061,6060,5694,6572,6904];
-const defaultSquadra=()=>({players:SQUADRA_SEED.slice(),formation:'3-4-3'});
+const defaultSquadre=()=>[{id:uid('q'),name:'NDICKAZZATHE',players:SQUADRA_SEED.slice(),formation:'3-4-3',createdAt:Date.now()}];
+/* Prima delle squadre multiple c'era un solo oggetto `squadra` senza id/nome:
+   lo si porta nel nuovo formato ad array, chiamandolo come l'unica squadra
+   che esisteva finora. */
+function migrateSquadre(list){return(list||[]).map(s=>({id:s.id||uid('q'),name:s.name||'NDICKAZZATHE',players:s.players||[],formation:s.formation||'3-4-3',createdAt:s.createdAt||Date.now()}));}
 function loadDB(){let r;try{r=JSON.parse(localStorage.getItem(LS));}catch(e){}
-  if(r&&r.v===2&&r.auctions)return{v:2,auctions:r.auctions.map(migrateAuction),leghe:r.leghe||[],squadra:(r.squadra&&r.squadra.players&&r.squadra.players.length)?r.squadra:defaultSquadra()};
-  if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)],leghe:[],squadra:defaultSquadra()};}
-  return{v:2,auctions:[],leghe:[],squadra:defaultSquadra()};}
+  if(r&&r.v===2&&r.auctions){
+    const squadre=r.squadre?migrateSquadre(r.squadre):(r.squadra?migrateSquadre([Object.assign({name:'NDICKAZZATHE'},r.squadra)]):defaultSquadre());
+    return{v:2,auctions:r.auctions.map(migrateAuction),leghe:r.leghe||[],squadre};
+  }
+  if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)],leghe:[],squadre:defaultSquadre()};}
+  return{v:2,auctions:[],leghe:[],squadre:defaultSquadre()};}
 let DB=loadDB();
 function save(){localStorage.setItem(LS,JSON.stringify(DB));scheduleCloudPush();}
 
@@ -44,7 +53,16 @@ function scheduleCloudPush(){
   clearTimeout(_pushTimer);
   _pushTimer=setTimeout(async()=>{const ok=await cloudPush(DB);if(ok)setSyncedAt(Date.now());},900);
 }
-const isEmptyDB=d=>!(d&&(((d.auctions||[]).length)||((d.leghe||[]).length)));
+/* Righe cloud salvate prima delle squadre multiple (o senza `squadre` per
+   qualche altro motivo) non vanno riseminate con NDICKAZZATHE a ogni sync:
+   qui, a differenza di loadDB(), l'assenza del campo significa "nessuna
+   squadra", non "primo avvio". */
+function normalizeCloudDB(d){
+  d=d||{};
+  return{v:2,auctions:(d.auctions||[]).map(migrateAuction),leghe:d.leghe||[],
+    squadre:d.squadre?migrateSquadre(d.squadre):(d.squadra?migrateSquadre([Object.assign({name:'NDICKAZZATHE'},d.squadra)]):[])};
+}
+const isEmptyDB=d=>!(d&&(((d.auctions||[]).length)||((d.leghe||[]).length)||((d.squadre||[]).some(s=>s.players&&s.players.length))));
 function mergeDBs(local,cloud){
   /* Solo per il primissimo sync di un dispositivo: se sia locale che cloud
      hanno già dati reali e non si erano mai parlati prima, uniamo per id
@@ -53,7 +71,8 @@ function mergeDBs(local,cloud){
   const byId=arr=>{const m={};(arr||[]).forEach(x=>{if(x&&x.id)m[x.id]=x;});return m;};
   const auctions=Object.assign({},byId(cloud.auctions),byId(local.auctions));
   const leghe=Object.assign({},byId(cloud.leghe),byId(local.leghe));
-  return{v:2,auctions:Object.values(auctions),leghe:Object.values(leghe)};
+  const squadre=Object.assign({},byId(cloud.squadre),byId(local.squadre));
+  return{v:2,auctions:Object.values(auctions),leghe:Object.values(leghe),squadre:Object.values(squadre)};
 }
 async function syncOnLogin(){
   if(_cloudSynced)return;if(!(window.AUTH&&AUTH.configured&&AUTH.user))return;
@@ -67,11 +86,11 @@ async function syncOnLogin(){
       return;
     }
     if(isEmptyDB(DB)){
-      DB=row.data;localStorage.setItem(LS,JSON.stringify(DB));setSyncedAt(new Date(row.updated_at).getTime());
+      DB=normalizeCloudDB(row.data);localStorage.setItem(LS,JSON.stringify(DB));setSyncedAt(new Date(row.updated_at).getTime());
       if(typeof render==='function')render();
       return;
     }
-    DB=mergeDBs(DB,row.data);
+    DB=mergeDBs(DB,normalizeCloudDB(row.data));
     localStorage.setItem(LS,JSON.stringify(DB));
     const ok=await cloudPush(DB);
     setSyncedAt(ok?Date.now():new Date(row.updated_at).getTime());
@@ -81,15 +100,13 @@ async function syncOnLogin(){
   if(row&&row.data){
     const cloudTs=new Date(row.updated_at).getTime();
     if(cloudTs>getSyncedAt()){
-      DB=row.data;localStorage.setItem(LS,JSON.stringify(DB));setSyncedAt(cloudTs);
+      DB=normalizeCloudDB(row.data);localStorage.setItem(LS,JSON.stringify(DB));setSyncedAt(cloudTs);
       if(typeof render==='function')render();
       return;
     }
   }
   const ok=await cloudPush(DB);if(ok)setSyncedAt(Date.now());
 }
-
-let _uid=Date.now();const uid=p=>p+(++_uid);
 
 /* ---- runtime state (page scripts may add fields, e.g. R.gf, R.tab) ---- */
 let R={search:'',detailId:null,compareId:null,cmpQ:''};
@@ -207,6 +224,9 @@ function assignedTeamOf(lg,pid){const a=lg.assign[pid];return a&&lg.teams.find(t
 function assignPlayer(lg,pid,teamId,price){lg.assign[pid]={teamId,price:isNaN(price)?0:price};save();}
 function unassignPlayer(lg,pid){delete lg.assign[pid];save();}
 function legaAssignedCount(lg){return Object.keys(lg.assign).length;}
+
+/* ---- squadre (rosa definitiva, una o più) ---- */
+const SQ=()=>{const id=new URLSearchParams(location.search).get('id');return(id&&DB.squadre.find(s=>s.id===id))||null;};
 
 /* ---- icons ---- */
 const IC={
