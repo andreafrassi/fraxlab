@@ -17,9 +17,13 @@ function migrateAuction(a){const b=a.budget||500;
     if(sl.tag==null||LEGACY_TAG_MAP[sl.tag]!=null)sl.tag=LEGACY_TAG_MAP[sl.tag||'']||'top';
     if(sl.cand&&sl.cand.length>1){const keep=sl.esito&&sl.cand.find(c=>c.pid===sl.esito.pid);sl.cand=[keep||sl.cand[0]];}});
   a.budget=b;delete a.participants;return a;}
-const defaultSquadra=()=>({players:[],formation:'3-4-3'});
+/* Rosa presa all'asta NDICKAZZA-THE (set 2026): seed iniziale di "La mia squadra"
+   finché non ce n'è ancora una salvata, così non va reinserita giocatore per
+   giocatore a mano dal listone. */
+const SQUADRA_SEED=[5841,4485,610,6956,4317,5514,2514,6496,7219,4502,5695,2423,1870,5687,7625,7223,1850,7060,6151,7071,2061,6060,5694,6572,6904];
+const defaultSquadra=()=>({players:SQUADRA_SEED.slice(),formation:'3-4-3'});
 function loadDB(){let r;try{r=JSON.parse(localStorage.getItem(LS));}catch(e){}
-  if(r&&r.v===2&&r.auctions)return{v:2,auctions:r.auctions.map(migrateAuction),leghe:r.leghe||[],squadra:r.squadra||defaultSquadra()};
+  if(r&&r.v===2&&r.auctions)return{v:2,auctions:r.auctions.map(migrateAuction),leghe:r.leghe||[],squadra:(r.squadra&&r.squadra.players&&r.squadra.players.length)?r.squadra:defaultSquadra()};
   if(r&&r.v===1&&r.auction){const a=Object.assign({id:'a'+Date.now(),name:'La mia asta',slots:r.slots||[],notes:r.notes||{},createdAt:Date.now()},r.auction);return{v:2,auctions:[migrateAuction(a)],leghe:[],squadra:defaultSquadra()};}
   return{v:2,auctions:[],leghe:[],squadra:defaultSquadra()};}
 let DB=loadDB();
